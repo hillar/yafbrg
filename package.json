@@ -1,0 +1,15 @@
+{
+  "name": "yafbrg",
+  "version": "0.0.0",
+  "description": "filesystem based route generation und API doc generation from source files",
+  "main": "index.js",
+  "repository": "https://github.com/hillar/yafbrg.git",
+  "author": "hillar <hillar@aarelaid.net>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^17.0.23",
+    "core-types-json-schema": "^1.6.2",
+    "core-types-ts": "^1.5.0",
+    "typescript": "^4.7.0-dev.20220330"
+  }
+}
