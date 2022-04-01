@@ -1,13 +1,16 @@
 import { default as ts } from 'typescript'
-import { convertTypeScriptToCoreTypes } from 'core-types-ts'
-import { convertCoreTypesToOpenApi } from 'core-types-json-schema'
+import { convertTypeScriptToCoreTypes, convertCoreTypesToTypeScript } from 'core-types-ts'
+import { convertCoreTypesToOpenApi, convertCoreTypesToJsonSchema } from 'core-types-json-schema'
+import { convertCoreTypesToGraphql } from 'core-types-graphql'
 import { default as chalk } from 'chalk'
+import { resolve, join, basename, dirname} from 'node:path'
 
 const primitives = ['number', 'string', 'boolean', 'bigint', 'symbol', 'null', 'undefined']
 
 // TODO do diagnostics without emitting
 // TODO prettier colors for tty
-async function compile(filename, outDir = '../.build') {
+async function compile(filename, outDir) {
+  //TODO test filename, outDir
   if (process.stdout.isTTY) console.log('compiling with', chalk.blue.bold('tsc --target esnext --module nodenext  --moduleResolution nodenext --declaration'), chalk.blue('--outDir', outDir), chalk.green(filename))
   const program = ts.createProgram([filename], {
     outDir,
@@ -17,6 +20,7 @@ async function compile(filename, outDir = '../.build') {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.NodeNext,
     declaration: true,
+    listEmittedFiles: true,
   })
 
   let emitResult = await program.emit()
@@ -35,8 +39,9 @@ async function compile(filename, outDir = '../.build') {
 
   let exitCode = emitResult.emitSkipped ? 1 : 0
   if (exitCode) process.exit(exitCode)
-
-  return program
+  const tmp = join(basename(dirname(filename)),basename(filename,'.mts')+'.mjs')
+  const root = emitResult.emittedFiles.filter(x=>x.endsWith(tmp)).pop()
+  return {program, root, emittedFiles: [...emitResult.emittedFiles.map(x=>resolve(x))]}
 }
 
 // TODO return only functions with HTTP method name
@@ -100,7 +105,12 @@ function getImportsundMethods(main, mainFileName) {
           const moduleSpecifier = node.moduleSpecifier.text
           if (!imports[moduleSpecifier]) imports[moduleSpecifier] = []
           for (const element of node.importClause.namedBindings.elements) {
-            imports[moduleSpecifier].push(element.name.escapedText)
+            // import {x as y} from '...'
+            if (element.propertyName){
+              const name = element.name.escapedText
+              const realname =  element.propertyName.escapedText
+              imports[moduleSpecifier].push(`${realname} as ${name}`)
+            } else imports[moduleSpecifier].push(element.name.escapedText)
           }
         }
       })
@@ -109,39 +119,58 @@ function getImportsundMethods(main, mainFileName) {
   return { imports, methods }
 }
 
+
+function toCoreTypes(sourceText){
+  const core = convertTypeScriptToCoreTypes(sourceText)
+  return { ...core,
+    toOpenApi: convertCoreTypesToOpenApi(core.data,{ title: undefined }),
+    toJsonSchema: convertCoreTypesToJsonSchema(core.data),
+    toGraphql: convertCoreTypesToGraphql(core.data),
+    toTypeScript:convertCoreTypesToTypeScript(core.data)
+   }
+}
+
+
 // TODO go recursive if subtype is not primitive
-function getOAPISchemas(main, typesInUse) {
+function getSchemas(main, typesInUse) {
+  const schemas = {}
   const oapiSchemas = {}
   for (const sourceFile of main.getSourceFiles()) {
     ts.forEachChild(sourceFile, (node) => {
       if (ts.isInterfaceDeclaration(node)) {
         const name = node.name.text
         if (typesInUse.includes(name)) {
-          if (!oapiSchemas[name]) {
+          if (!schemas[sourceFile.fileName]) schemas[sourceFile.fileName] = toCoreTypes(sourceFile.text)
+          /*if (!oapiSchemas[name]) {
             const { data } = convertCoreTypesToOpenApi(convertTypeScriptToCoreTypes(sourceFile.text).data, { title: undefined })
             for (const key of Object.keys(data.components.schemas)) {
               if (typesInUse.includes(key)) oapiSchemas[key] = data.components.schemas[key]
             }
           }
+          */
         }
       }
     })
   }
-  return oapiSchemas
+  return {oapiSchemas,schemas}
 }
 
 export async function compileundparse(fileName, outDir) {
-  const main = await compile(fileName, outDir)
-  //if (process.stdout.isTTY) console.log('OK',chalk.green(fileName))
+  const { program:main, root:compiledFilename } = await compile(fileName, outDir)
+  //const compiledFilename = root //resolve(emittedFile)
   const { imports, methods } = getImportsundMethods(main, fileName)
   if (process.stdout.isTTY) console.log('parsed', chalk.green(fileName), 'imports:', Object.keys(imports).join(';'), 'methods:', methods.map(({ name }) => name).join(';'))
   // uniq param and return types
   let typesInUse = [...new Set(methods.map(({ parameters }) => parameters.map(({ type }) => type)).flat())].filter((x) => !primitives.includes(x))
   typesInUse = [...new Set([...typesInUse, ...new Set(methods.map(({ type }) => type))])]
-  const schemas = getOAPISchemas(main, typesInUse)
-  if (process.stdout.isTTY) console.log('parsed', chalk.green(fileName), 'schemas:', Object.keys(schemas).join(';'))
-  return { imports, schemas, methods }
+  const {schemas} = getSchemas(main, typesInUse)
+
+  if (process.stdout.isTTY) for (const key of Object.keys(schemas)){
+    console.log('parsed', chalk.green(key), 'schemas:', schemas[key].data.types.map(({name})=>name).join(';'))
+  }
+
+  return { imports, schemas, methods, compiledFilename }
 }
 
-const r = await compileundparse(process.argv.slice(2)[0])
-console.log(chalk.green(JSON.stringify(r,null,4)))
+//const r = await compileundparse(process.argv.slice(2)[0])
+//console.log(chalk.green(JSON.stringify(r,null,4)))

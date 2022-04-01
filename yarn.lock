@@ -17,6 +17,14 @@ code-error-fragment@0.0.230:
   resolved "https://registry.yarnpkg.com/code-error-fragment/-/code-error-fragment-0.0.230.tgz#d736d75c832445342eca1d1fedbf17d9618b14d7"
   integrity sha512-cadkfKp6932H8UkhzE/gcUqhRMNf8jHzkAN7+5Myabswaghu4xABTgPHDCjW+dBAJxj/SpkTYokpzDqY4pCzQw==
 
+core-types-graphql@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/core-types-graphql/-/core-types-graphql-1.4.0.tgz#5b40da8c4ed2dcbebe4356e6e2930359027f6fc4"
+  integrity sha512-jRqCHdrZ7fGOdM41QyGGTsNxGIgozYkNrjNPRUWdr2MsnOjM+rz7wwugpkAj5MHoN6PwvSsJh1svvWq725YlPA==
+  dependencies:
+    core-types "^1.10.0"
+    graphql "^15.5.0"
+
 core-types-json-schema@^1.6.2:
   version "1.6.2"
   resolved "https://registry.yarnpkg.com/core-types-json-schema/-/core-types-json-schema-1.6.2.tgz#99eb64f9cae0c29486b7c98fcaaa826413bad588"
@@ -44,6 +52,11 @@ grapheme-splitter@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/grapheme-splitter/-/grapheme-splitter-1.0.4.tgz#9cf3a665c6247479896834af35cf1dbb4400767e"
   integrity sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==
+
+graphql@^15.5.0:
+  version "15.8.0"
+  resolved "https://registry.yarnpkg.com/graphql/-/graphql-15.8.0.tgz#33410e96b012fa3bdb1091cc99a94769db212b38"
+  integrity sha512-5gghUc24tP9HRznNpV2+FIoq3xKkj5dTQqf4v0CpdPbFVwFkWoxOM+o+2OC9ZSvjEMTjfmG9QT+gcvggTwW1zw==
 
 json-to-ast@^2.1.0:
   version "2.1.0"
