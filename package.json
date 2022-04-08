@@ -1,7 +1,7 @@
 {
   "name": "yafbrg",
   "version": "0.0.0",
-  "description": "filesystem based route generation und API doc generation from source files",
+  "description": "filesystem based routes und API docs generation",
   "main": "index.js",
   "repository": "https://github.com/hillar/yafbrg.git",
   "author": "hillar <hillar@aarelaid.net>",
@@ -11,6 +11,7 @@
     "core-types-graphql": "^1.4.0",
     "core-types-json-schema": "^1.6.2",
     "core-types-ts": "^1.5.0",
-    "typescript": "^4.7.0-dev.20220330"
+    "typescript": "^4.7.0-dev.20220330",
+    "typescript-transform-paths": "^3.3.1"
   }
 }

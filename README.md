@@ -67,6 +67,18 @@ curl example.com/users/1
 > DELETE
 >> deletes the specified resource.
 
+#### POST, PUT, PATCH, DELETE
+
+Endpoints can handle any HTTP method by exporting the corresponding function:
+
+export function post(event:string):number {...}
+
+export function put(event:string):number {...}
+
+export function patch(event:string):number {...}
+
+export function del(event:string):number {...} // `delete` is a reserved word
+
 ## list of response codes
 
 * 501 Not Implemented
@@ -82,6 +94,17 @@ curl example.com/users/1
 * 503 Service Unavailable
 * 429 Too Many Requests
 
+
+## No relative path hell
+
+any other directory in same directory of `routes` is aliased with `$name`
+
+```
+// no need for ../../../../providers/auth.mjs
+import { checkUser }  from '$providers/auth.mjs'
+import { IUser }  from '$interfaces/user.mjs'
+
+```
 
 
 ### source code is single source of truth (SSOT) for API documentation
@@ -106,3 +129,17 @@ yarn add -D @types/node
 
 
 ```
+
+? [...file]
+* https://kit.svelte.dev/docs/routing#advanced-routing-rest-parameters
+
+? [page=integer]
+* https://kit.svelte.dev/docs/routing#advanced-routing-matching
+
+#### fastify
+
+https://github.com/spa5k/fastify-file-routes
+https://github.com/GiovanniCardamone/fastify-autoroutes
+https://github.com/israeleriston/fastify-register-routes
+
+https://github.com/fastify/fastify-swagger

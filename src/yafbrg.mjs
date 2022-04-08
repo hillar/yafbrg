@@ -1,6 +1,6 @@
-import { compileundparse } from './utils/parseMTS.mjs'
+import { compileundparse, primitives, toOpenApi } from './utils/parseMTS.mjs'
 
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve, basename, dirname } from 'node:path'
 
 // for debug only
@@ -121,9 +121,15 @@ async function findAllMTS(dirName){
   return result
 }
 
-const routesDir = process.argv.slice(2)[0] || './routes'
-const outDir = '.build'
+const routes = process.argv.slice(2)[0] || './routes'
+const out = './.buildkala'
+const root = dirname(routes)+'/' || './'
 
+const x = await parseAllMTS(routes,out,root)
+console.dir({x})
+
+async function parseAllMTS(routesDir,outDir,rootDir){
+  console.dir({parseAllMTS:{routesDir,outDir,rootDir}})
 const prepRoutes = await findAllMTS(routesDir)
 //console.dir(prepRoutes)
 const parsed = []
@@ -144,8 +150,14 @@ for (const route of parsed) {
   }
 }
 for (const route of parsed) {
-  const dn = dirname(route.mts)
-  const compiled = await compileundparse(route.mts,join(outDir))
+  //const dn = dirname(route.mts)
+
+  const pathsT = {
+    '$providers/*': ['./src/providers'+ '/*'],
+    '$interfaces/*': ['./src/interfaces'+ '/*'],
+  }
+
+  const compiled = await compileundparse(route.mts,outDir,rootDir,pathsT)
   for (const key of Object.keys(compiled)) route[key] = compiled[key]
   if (route.compiledFilename) {
     try {
@@ -160,7 +172,160 @@ for (const route of parsed) {
   }
 }
 
-console.log(print_r(parsed))
+const tmp = {} // uniq interfaces
+for (const route of parsed) {
+  const interfaces = {...route.interfaces }
+  delete route.interfaces
+  for (const i of Object.keys(interfaces)) {
+    const {name, orig } = interfaces[i]
+    const hash = name+orig
+    if (!tmp[hash]){
+      tmp[hash] = interfaces[i]
+    }
+  }
+}
+const types = []
+for (const i of Object.keys(tmp)) {
+  types.push(tmp[i])
+}
+const schemas = {version: 1, types }
+
+  return {schemas, parsed}
+}
+//console.log(print_r(toOpenApi(schemas).data))
+//console.log(print_r(parsed.map(({methods})=>methods)))
+//console.log(print_r({paths:parsed,schemas}))
+
+//console.log(JSON.stringify(toOpenApi(schemas).data,null,4))
+
+function toPolka(){
+
+let polkaStr = `
+// generated ${JSON.stringify(new Date())}
+// ${resolve(join('./',outDir))}
+import { STATUS_CODES as HTTP_STATUS_CODES } from 'node:http'
+import { default as polka } from 'polka'
+/*IMPORTS*/
+
+function maybeExit(error){
+  if (error instanceof RangeError) {
+    console.error(error)
+    process.exit(1)
+  }
+  if (error instanceof SyntaxError) {
+    console.error(error)
+    process.exit(2)
+  }
+  if (error instanceof ReferenceError) {
+    console.error(error)
+    process.exit(3)
+  }
+  if (error instanceof TypeError) {
+    console.error(error)
+    process.exit(4)
+  }
+  if (error instanceof AggregateError) {
+    console.error(error)
+    process.exit(5)
+  }
+  if (error instanceof EvalError) {
+    console.error(error)
+    process.exit(6)
+  }
+}
+
+
+polka({onError:(err, req, res)=>{
+  console.error('custom onError')
+  console.error(err)
+  let code = typeof err.status === 'number' && err.status;
+  code = res.statusCode = (code && code >= 100 ? code : 422);
+  if (typeof err === 'string' || Buffer.isBuffer(err)) res.end(err);
+  else res.end(err.message || HTTP_STATUS_CODES[code]);
+  maybeExit(err)
+}})
+/*ROUTES*/
+    .listen(3000, (l) => {
+      console.log("> Running on localhost:3000");
+    })
+
+`
+
+
+
+let curlStr = ""
+let routesStr = ""
+let importsStr = ""
+for (const route of parsed){
+
+  const polkafied = route.orig.replaceAll("]",'').replaceAll("[",":")
+  let bittes = []
+  for (let bitte of polkafied.replaceAll(":","").split('/')) if (bitte?.[0]) bittes.push(bitte?.[0]?.toUpperCase() + bitte?.substring(1))
+  const importsAs = []
+  for (const method of route.methods) {
+    curlStr += `curl -s -v -X${method.name.toUpperCase()} localhost:3000${route.route}/`
+    const importAs = `${method.name}${bittes.join('')}`
+    importsAs.push(`${method.name} as ${importAs} `)
+    // put arg in func param order
+    const _args = method.parameters.map(({name})=>name)
+    const args = []
+    for (const arg of _args) {
+      if (route.keys.includes(arg)) args.push(`req?.params?.${arg}`)
+      else args.push(`req?.query?.${arg}`)
+    }
+    let isAwait = method.isAsync ? 'await' : ''
+    let isAsync = method.isAsync ? 'async' : ''
+    let contentType = "res.setHeader('conten-type','application/json; charset=UTF-8')"
+    let send = ` ${contentType}
+      res.end(JSON.stringify(${isAwait} ${importAs}(${args})))`
+    if (primitives.includes(method.type)) {
+      contentType = "res.setHeader('conten-type','text/plain; charset=UTF-8')"
+      send = ` ${contentType}
+      res.end(''+${isAwait} ${importAs}(${args}))`
+
+    }
+    // https://nodejs.org/en/docs/guides/nodejs-docker-webapp/
+    // RUN npm ci --only=production
+    const logifnotproduction = process.env.NODE_ENV === 'production' ?
+    ``
+    :
+    `console.log('${method.name}','${polkafied}',req.params,req.query)
+    `
+    routesStr += `
+    .${method.name}('${polkafied}', ${isAsync} (req, res, next) => {
+      ${logifnotproduction} ${send}
+    })`
+  }
+  console.dir(route)
+  importsStr += `import { ${importsAs.join(', ')}} from '${route.compiledFilename.replace(outDir,'.')}'\n`
+}
+
+polkaStr = polkaStr.replace('/*IMPORTS*/',importsStr)
+polkaStr = polkaStr.replace('/*ROUTES*/',routesStr)
+}
+
+/*
+
+//console.log(polkaStr)
+try {
+  writeFileSync(join(outDir,'polka.mjs'),polkaStr)
+  console.log('done', join(outDir,'polka.mjs'))
+} catch (error) {
+  console.error(error)
+}
+
+try {
+  writeFileSync(join(outDir,'curl-all.bash'),curlStr)
+  console.log('done', join(outDir,'curl-all.bash'))
+} catch (error) {
+  console.error(error)
+}
+
+*/
+
+
+
+//console.log(print_r(parsed))
 //console.dir(parsed)
 /*
 for (const route of parsed) {

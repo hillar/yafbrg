@@ -1,12 +1,12 @@
-export interface LabeledValue {
-    label: string;
-}
+import {LabeledValue, Color} from './index.interfaces.mjs'
+export {LabeledValue, Color } from './index.interfaces.mjs'
+
 export interface SquareConfig {
-    color?: string;
+    color?: Color;
     width?: number;
 }
 export interface LabeledSquareConfig {
-    color?: string;
+    color?: Color;
     width?: number;
     label: LabeledValue;
 }

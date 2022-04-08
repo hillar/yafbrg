@@ -1,201 +1,11 @@
 ```
-
-
-# yafbrg/samples/num2words main % node ../../src/yafbrg.mjs src/routes
-
-
+yafbrg/samples/num2words main % node ../../src/yafbrg.mjs src/routes
+compiling with tsc --target esnext --module nodenext  --moduleResolution nodenext --declaration --outDir .build src/routes/[kala]/maja/:kana.mts
+parsed src/routes/[kala]/maja/:kana.mts imports: ../../../services/n2w.mjs;../../../services/index.mjs methods: get;post
+parsed yafbrg/samples/num2words/src/services/index.mts schemas: LabeledValue;SquareConfig;LabeledSquareConfig
+Array
 [
 	0 => Object
-	{
-		orig => '/[num]',
-		route => '/',
-		keys => Array
-		[
-			0 => 'num'
-		],
-		pattern => /^\/([^/]+?)\/?$/i,
-		mts => 'src/routes/[num].mts',
-		imports => Object
-		{
-			../services/n2w.mjs => Array
-			[
-				0 => 'convertNumberToWordsEN'
-			]
-		},
-		schemas => Object
-
-		},
-		methods => Array
-		[
-			0 => Object
-			{
-				name => 'get',
-				type => 'string',
-				parameters => Array
-				[
-					0 => Object
-					{
-						name => 'n',
-						type => 'number',
-						required => true
-					}
-				],
-				jsDoc => undefined
-			}
-		],
-		compiledFilename => '.build/routes/[num].mjs',
-		functions => Object
-		{
-			get => 'function get(n) {
-    return convertNumberToWordsEN(n);
-}'
-		}
-	},
-	1 => Object
-	{
-		orig => '/',
-		route => '/',
-		keys => Array
-
-		],
-		pattern => /^\/?$/i,
-		mts => 'src/routes/index.mts',
-		imports => Object
-		{
-			../services/n2w.mjs => Array
-			[
-				0 => 'convertNumberToWordsEN'
-			],
-			../services/index.mjs => Array
-			[
-				0 => 'convertSquareConfig',
-				1 => 'LabeledSquareConfig',
-				2 => 'SquareConfig',
-				3 => 'LabeledValue'
-			]
-		},
-		schemas => Object
-		{
-			LabeledValue => Object
-			{
-				properties => Object
-				{
-					label => Object
-					{
-						title => 'LabeledValue.label',
-						type => 'string'
-					}
-				},
-				required => Array
-				[
-					0 => 'label'
-				],
-				additionalProperties => false,
-				title => 'LabeledValue',
-				type => 'object'
-			},
-			SquareConfig => Object
-			{
-				properties => Object
-				{
-					color => Object
-					{
-						title => 'SquareConfig.color',
-						type => 'string'
-					},
-					width => Object
-					{
-						title => 'SquareConfig.width',
-						type => 'number'
-					}
-				},
-				additionalProperties => false,
-				title => 'SquareConfig',
-				type => 'object'
-			},
-			LabeledSquareConfig => Object
-			{
-				properties => Object
-				{
-					color => Object
-					{
-						title => 'LabeledSquareConfig.color',
-						type => 'string'
-					},
-					width => Object
-					{
-						title => 'LabeledSquareConfig.width',
-						type => 'number'
-					},
-					label => Object
-					{
-						$ref => '#/components/schemas/LabeledValue',
-						title => 'LabeledSquareConfig.label'
-					}
-				},
-				required => Array
-				[
-					0 => 'label'
-				],
-				additionalProperties => false,
-				title => 'LabeledSquareConfig',
-				type => 'object'
-			}
-		},
-		methods => Array
-		[
-			0 => Object
-			{
-				name => 'get',
-				type => 'string',
-				parameters => Array
-				[
-					0 => Object
-					{
-						name => 'n',
-						type => 'number',
-						required => true
-					}
-				],
-				jsDoc => undefined
-			},
-			1 => Object
-			{
-				name => 'post',
-				type => 'LabeledSquareConfig',
-				parameters => Array
-				[
-					0 => Object
-					{
-						name => 'sq',
-						type => 'SquareConfig',
-						required => true
-					},
-					1 => Object
-					{
-						name => 'l',
-						type => 'LabeledValue',
-						required => true
-					}
-				],
-				jsDoc => Array
-				[
-					0 => 'kala asadc'
-				]
-			}
-		],
-		compiledFilename => '.build/routes/index.mjs',
-		functions => Object
-		{
-			get => 'function get(n) {
-    return convertNumberToWordsEN(n);
-}',
-			post => 'function post(sq, l) {
-    return convertSquareConfig(sq, l);
-}'
-		}
-	},
-	2 => Object
 	{
 		orig => '/[kala]/maja/:kana',
 		route => '/',
@@ -222,70 +32,354 @@
 		},
 		schemas => Object
 		{
-			LabeledValue => Object
+			yafbrg/samples/num2words/src/services/index.mts => Object
 			{
-				properties => Object
+				data => Object
 				{
-					label => Object
-					{
-						title => 'LabeledValue.label',
-						type => 'string'
-					}
+					version => 1,
+					types => Array
+					[
+						0 => Object
+						{
+							name => 'LabeledValue',
+							type => 'object',
+							properties => Object
+							{
+								label => Object
+								{
+									required => true,
+									node => Object
+									{
+										type => 'string',
+										title => 'LabeledValue.label'
+									}
+								}
+							},
+							additionalProperties => false,
+							title => 'LabeledValue'
+						},
+						1 => Object
+						{
+							name => 'SquareConfig',
+							type => 'object',
+							properties => Object
+							{
+								color => Object
+								{
+									required => false,
+									node => Object
+									{
+										type => 'string',
+										title => 'SquareConfig.color'
+									}
+								},
+								width => Object
+								{
+									required => false,
+									node => Object
+									{
+										type => 'number',
+										title => 'SquareConfig.width'
+									}
+								}
+							},
+							additionalProperties => false,
+							title => 'SquareConfig'
+						},
+						2 => Object
+						{
+							name => 'LabeledSquareConfig',
+							type => 'object',
+							properties => Object
+							{
+								color => Object
+								{
+									required => false,
+									node => Object
+									{
+										type => 'string',
+										title => 'LabeledSquareConfig.color'
+									}
+								},
+								width => Object
+								{
+									required => false,
+									node => Object
+									{
+										type => 'number',
+										title => 'LabeledSquareConfig.width'
+									}
+								},
+								label => Object
+								{
+									required => true,
+									node => Object
+									{
+										type => 'ref',
+										ref => 'LabeledValue',
+										title => 'LabeledSquareConfig.label'
+									}
+								}
+							},
+							additionalProperties => false,
+							title => 'LabeledSquareConfig'
+						}
+					]
 				},
-				required => Array
+				convertedTypes => Array
 				[
-					0 => 'label'
+					0 => 'LabeledValue',
+					1 => 'SquareConfig',
+					2 => 'LabeledSquareConfig'
 				],
-				additionalProperties => false,
-				title => 'LabeledValue',
-				type => 'object'
-			},
-			SquareConfig => Object
-			{
-				properties => Object
+				notConvertedTypes => Array
+
+				],
+				toOpenApi => Object
 				{
-					color => Object
+					convertedTypes => Array
+					[
+						0 => 'LabeledValue',
+						1 => 'SquareConfig',
+						2 => 'LabeledSquareConfig'
+					],
+					notConvertedTypes => Array
+
+					],
+					data => Object
 					{
-						title => 'SquareConfig.color',
-						type => 'string'
-					},
-					width => Object
-					{
-						title => 'SquareConfig.width',
-						type => 'number'
+						openapi => '3.0.0',
+						info => Object
+						{
+							title => undefined,
+							version => undefined,
+							x-comment => 'Generated by core-types-json-schema (https://github.com/grantila/core-types-json-schema)'
+						},
+						paths => Object
+
+						},
+						components => Object
+						{
+							schemas => Object
+							{
+								LabeledValue => Object
+								{
+									properties => Object
+									{
+										label => Object
+										{
+											title => 'LabeledValue.label',
+											type => 'string'
+										}
+									},
+									required => Array
+									[
+										0 => 'label'
+									],
+									additionalProperties => false,
+									title => 'LabeledValue',
+									type => 'object'
+								},
+								SquareConfig => Object
+								{
+									properties => Object
+									{
+										color => Object
+										{
+											title => 'SquareConfig.color',
+											type => 'string'
+										},
+										width => Object
+										{
+											title => 'SquareConfig.width',
+											type => 'number'
+										}
+									},
+									additionalProperties => false,
+									title => 'SquareConfig',
+									type => 'object'
+								},
+								LabeledSquareConfig => Object
+								{
+									properties => Object
+									{
+										color => Object
+										{
+											title => 'LabeledSquareConfig.color',
+											type => 'string'
+										},
+										width => Object
+										{
+											title => 'LabeledSquareConfig.width',
+											type => 'number'
+										},
+										label => Object
+										{
+											$ref => '#/components/schemas/LabeledValue',
+											title => 'LabeledSquareConfig.label'
+										}
+									},
+									required => Array
+									[
+										0 => 'label'
+									],
+									additionalProperties => false,
+									title => 'LabeledSquareConfig',
+									type => 'object'
+								}
+							}
+						}
 					}
 				},
-				additionalProperties => false,
-				title => 'SquareConfig',
-				type => 'object'
-			},
-			LabeledSquareConfig => Object
-			{
-				properties => Object
+				toJsonSchema => Object
 				{
-					color => Object
+					data => Object
 					{
-						title => 'LabeledSquareConfig.color',
-						type => 'string'
+						definitions => Object
+						{
+							LabeledValue => Object
+							{
+								type => 'object',
+								properties => Object
+								{
+									label => Object
+									{
+										type => 'string',
+										title => 'LabeledValue.label'
+									}
+								},
+								required => Array
+								[
+									0 => 'label'
+								],
+								additionalProperties => false,
+								title => 'LabeledValue'
+							},
+							SquareConfig => Object
+							{
+								type => 'object',
+								properties => Object
+								{
+									color => Object
+									{
+										type => 'string',
+										title => 'SquareConfig.color'
+									},
+									width => Object
+									{
+										type => 'number',
+										title => 'SquareConfig.width'
+									}
+								},
+								additionalProperties => false,
+								title => 'SquareConfig'
+							},
+							LabeledSquareConfig => Object
+							{
+								type => 'object',
+								properties => Object
+								{
+									color => Object
+									{
+										type => 'string',
+										title => 'LabeledSquareConfig.color'
+									},
+									width => Object
+									{
+										type => 'number',
+										title => 'LabeledSquareConfig.width'
+									},
+									label => Object
+									{
+										$ref => '#/definitions/LabeledValue',
+										title => 'LabeledSquareConfig.label'
+									}
+								},
+								required => Array
+								[
+									0 => 'label'
+								],
+								additionalProperties => false,
+								title => 'LabeledSquareConfig'
+							}
+						},
+						$comment => 'Generated by core-types-json-schema (https://github.com/grantila/core-types-json-schema)'
 					},
-					width => Object
-					{
-						title => 'LabeledSquareConfig.width',
-						type => 'number'
-					},
-					label => Object
-					{
-						$ref => '#/components/schemas/LabeledValue',
-						title => 'LabeledSquareConfig.label'
-					}
+					convertedTypes => Array
+					[
+						0 => 'LabeledValue',
+						1 => 'SquareConfig',
+						2 => 'LabeledSquareConfig'
+					],
+					notConvertedTypes => Array
+
+					]
 				},
-				required => Array
-				[
-					0 => 'label'
-				],
-				additionalProperties => false,
-				title => 'LabeledSquareConfig',
-				type => 'object'
+				toGraphql => Object
+				{
+					data => '# This file was auto-generated using
+# core-types-graphql (https://github.com/grantila/core-types-graphql)
+
+type LabeledValue {
+  label: String!
+}
+
+type SquareConfig {
+  color: String
+  width: Float
+}
+
+type LabeledSquareConfig {
+  color: String
+  width: Float
+  label: LabeledValue!
+}
+',
+					convertedTypes => Array
+					[
+						0 => 'LabeledValue',
+						1 => 'SquareConfig',
+						2 => 'LabeledSquareConfig'
+					],
+					notConvertedTypes => Array
+
+					]
+				},
+				toTypeScript => Object
+				{
+					data => '/* tslint:disable */
+/* eslint-disable */
+/**
+ * This file is generated by core-types-ts, DO NOT EDIT.
+ * For more information, see:
+ *  - {@link https://github.com/grantila/core-types-ts}
+ */
+
+export interface LabeledValue {
+    label: string;
+}
+
+export interface SquareConfig {
+    color?: string;
+    width?: number;
+}
+
+export interface LabeledSquareConfig {
+    color?: string;
+    width?: number;
+    label: LabeledValue;
+}
+',
+					convertedTypes => Array
+					[
+						0 => 'LabeledValue',
+						1 => 'SquareConfig',
+						2 => 'LabeledSquareConfig'
+					],
+					notConvertedTypes => Array
+
+					]
+				}
 			}
 		},
 		methods => Array
@@ -340,53 +434,6 @@
     return convertSquareConfig(sq, l);
 }'
 		}
-	},
-	3 => Object
-	{
-		orig => '/[kala]/maja/',
-		route => '/',
-		keys => Array
-		[
-			0 => 'kala'
-		],
-		pattern => /^\/([^/]+?)\/maja\/?$/i,
-		mts => 'src/routes/[kala]/maja/index.mts',
-		imports => Object
-		{
-			../../../services/n2w.mjs => Array
-			[
-				0 => 'convertNumberToWordsEN'
-			]
-		},
-		schemas => Object
-
-		},
-		methods => Array
-		[
-			0 => Object
-			{
-				name => 'get',
-				type => 'string',
-				parameters => Array
-				[
-					0 => Object
-					{
-						name => 'n',
-						type => 'number',
-						required => true
-					}
-				],
-				jsDoc => undefined
-			}
-		],
-		compiledFilename => '.build/routes/[kala]/maja/index.mjs',
-		functions => Object
-		{
-			get => 'function get(n) {
-    return convertNumberToWordsEN(n);
-}'
-		}
 	}
 ]
-
 ```

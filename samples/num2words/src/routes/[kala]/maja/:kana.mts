@@ -2,8 +2,12 @@ import { convertNumberToWordsEN } from '../../../services/n2w.mjs'
 import { convertSquareConfig, LabeledSquareConfig, SquareConfig, LabeledValue } from '../../../services/index.mjs'
 
 
-export function get(n:number):string {
-  return convertNumberToWordsEN(n)
+export async function get(kana:number,kala:string,kolja:number):Promise<string|Error> {
+  kana = Number(kana)
+  if (isNaN(kana)) {
+    throw new Error('missing kana as number')
+  }
+  return convertNumberToWordsEN(kana)
 }
 
 /**

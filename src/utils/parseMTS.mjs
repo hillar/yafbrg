@@ -4,16 +4,35 @@ import { convertCoreTypesToOpenApi, convertCoreTypesToJsonSchema } from 'core-ty
 import { convertCoreTypesToGraphql } from 'core-types-graphql'
 import { default as chalk } from 'chalk'
 import { resolve, join, basename, dirname} from 'node:path'
+import typescripttransformpaths from 'typescript-transform-paths'
 
-const primitives = ['number', 'string', 'boolean', 'bigint', 'symbol', 'null', 'undefined']
+const createTransform = typescripttransformpaths.default
+
+export const toOpenApi = (data) => convertCoreTypesToOpenApi(data,{ title: undefined })
+export const toJsonSchema = convertCoreTypesToJsonSchema
+export const toGraphql = convertCoreTypesToGraphql
+export const toTypeScript = convertCoreTypesToTypeScript
+
+export const primitives = ['number', 'string', 'boolean', 'bigint', 'symbol', 'null', 'undefined']
 
 // TODO do diagnostics without emitting
 // TODO prettier colors for tty
-async function compile(filename, outDir) {
-  //TODO test filename, outDir
+// TODO write files only once ..
+/*
+  const createdFiles = {}
+  const host = ts.createCompilerHost(options);
+  host.writeFile = (fileName: string, contents: string) => createdFiles[fileName] = contents
+  const program = ts.createProgram(fileNames, options, host);
+  for (createdFiles)
+*/
+async function compile(filename, outDir, rootDir, paths) {
+  let counter = 0
   if (process.stdout.isTTY) console.log('compiling with', chalk.blue.bold('tsc --target esnext --module nodenext  --moduleResolution nodenext --declaration'), chalk.blue('--outDir', outDir), chalk.green(filename))
-  const program = ts.createProgram([filename], {
+  const tscConfig = {
+    baseUrl: rootDir,
+    rootDir,
     outDir,
+    paths,
     noEmitOnError: true,
     noImplicitAny: false,
     moduleResolution: ts.ModuleResolutionKind.NodeNext,
@@ -21,19 +40,30 @@ async function compile(filename, outDir) {
     module: ts.ModuleKind.NodeNext,
     declaration: true,
     listEmittedFiles: true,
-  })
-
-  let emitResult = await program.emit()
+    esModuleInterop: true
+  }
+  const program = ts.createProgram([filename], tscConfig)
+  let emitResult = await program.emit(
+    undefined,
+    (fileName, content) => {
+      ts.sys.writeFile(fileName, `// ! do not edit @generated  ${JSON.stringify(new Date())}  ${ts.sys.newLine}${content}`);
+    },
+    undefined,
+    undefined,
+    {
+      before: [],
+      after: [createTransform(program)],
+      afterDeclarations: [createTransform(program)],
+    })
   let allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics)
-
   allDiagnostics.forEach((diagnostic) => {
-    if (process.stdout.isTTY) console.log(chalk.red(diagnostic.file.fileName))
-    if (diagnostic.file) {
+    if (process.stdout.isTTY) console.log(chalk.red(diagnostic?.file?.fileName||''))
+    if (diagnostic?.file) {
       let { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start)
       let message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')
       console.error(`${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`)
     } else {
-      console.error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+      console.error(chalk.red(filename),ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
     }
   })
 
@@ -41,7 +71,7 @@ async function compile(filename, outDir) {
   if (exitCode) process.exit(exitCode)
   const tmp = join(basename(dirname(filename)),basename(filename,'.mts')+'.mjs')
   const root = emitResult.emittedFiles.filter(x=>x.endsWith(tmp)).pop()
-  return {program, root, emittedFiles: [...emitResult.emittedFiles.map(x=>resolve(x))]}
+  return { program, root, emittedFiles: [...emitResult.emittedFiles.map(x=>resolve(x))]}
 }
 
 // TODO return only functions with HTTP method name
@@ -55,16 +85,15 @@ function getImportsundMethods(main, mainFileName) {
     const required = parameter.questionToken?.kind !== ts.SyntaxKind.QuestionToken
     return { name, type, required }
   }
-  // Visit every sourceFile in the program
-  // Walk the tree to search for ..
+  // walk the AST for ..
   // export const x = (a,b) => {}
   // export const x = function y(a,b){}
   // export function x(a,b)
   const methods = []
   const imports = {}
-  for (const sourceFile of main.getSourceFiles()) {
+
+    const sourceFile = main.getSourceFile(mainFileName)
     if (!sourceFile.isDeclarationFile) {
-      if (sourceFile.fileName !== mainFileName) continue
       ts.forEachChild(sourceFile, (node) => {
         if (ts.isVariableStatement(node)) {
           for (const declaration of node.declarationList.declarations) {
@@ -76,7 +105,9 @@ function getImportsundMethods(main, mainFileName) {
                 parameters.push(getParam(parameter))
               }
               let type = checker.typeToString(checker.getTypeAtLocation(declaration.initializer.type), declaration.initializer.type, ts.TypeFormatFlags.None)
-              //TODO alternate tyes with |
+              // TODO alternate types with |
+              let isAsync
+              if (type.startsWith('Promise<')) isAsync = true
               type = type.replace('Promise<', '').replace('>', '')
               // export const x = function y(a,b){}
               let aliasFor = declaration.initializer.symbol.escapedName.toString()
@@ -84,10 +115,10 @@ function getImportsundMethods(main, mainFileName) {
               let jsDoc = []
               if (node.jsDoc) for (const { comment } of node.jsDoc) jsDoc.push(comment)
               else jsDoc = undefined
-              methods.push({ name, type, parameters, aliasFor, jsDoc })
+              methods.push({ name, type, isAsync, parameters, aliasFor, jsDoc })
             }
           }
-          // export function x(a,b)
+        // export function x(a,b)
         } else if (ts.isFunctionDeclaration(node)) {
           const name = node.name.escapedText.toString()
           const parameters = []
@@ -95,82 +126,77 @@ function getImportsundMethods(main, mainFileName) {
             parameters.push(getParam(parameter))
           }
           let type = checker.typeToString(checker.getTypeAtLocation(node.type), node.type, ts.TypeFormatFlags.None)
-          //TODO Promise<foo>
+          let isAsync
+          if (type.startsWith('Promise<')) isAsync = true
           type = type.replace('Promise<', '').replace('>', '')
           let jsDoc = []
           if (node.jsDoc) for (const { comment } of node.jsDoc) jsDoc.push(comment)
           else jsDoc = undefined
-          methods.push({ name, type, parameters, jsDoc })
-        } else if (ts.isImportDeclaration(node)) {
-          const moduleSpecifier = node.moduleSpecifier.text
-          if (!imports[moduleSpecifier]) imports[moduleSpecifier] = []
-          for (const element of node.importClause.namedBindings.elements) {
-            // import {x as y} from '...'
-            if (element.propertyName){
-              const name = element.name.escapedText
-              const realname =  element.propertyName.escapedText
-              imports[moduleSpecifier].push(`${realname} as ${name}`)
-            } else imports[moduleSpecifier].push(element.name.escapedText)
-          }
-        }
-      })
-    }
-  }
-  return { imports, methods }
-}
-
-
-function toCoreTypes(sourceText){
-  const core = convertTypeScriptToCoreTypes(sourceText)
-  return { ...core,
-    toOpenApi: convertCoreTypesToOpenApi(core.data,{ title: undefined }),
-    toJsonSchema: convertCoreTypesToJsonSchema(core.data),
-    toGraphql: convertCoreTypesToGraphql(core.data),
-    toTypeScript:convertCoreTypesToTypeScript(core.data)
-   }
-}
-
-
-// TODO go recursive if subtype is not primitive
-function getSchemas(main, typesInUse) {
-  const schemas = {}
-  const oapiSchemas = {}
-  for (const sourceFile of main.getSourceFiles()) {
-    ts.forEachChild(sourceFile, (node) => {
-      if (ts.isInterfaceDeclaration(node)) {
-        const name = node.name.text
-        if (typesInUse.includes(name)) {
-          if (!schemas[sourceFile.fileName]) schemas[sourceFile.fileName] = toCoreTypes(sourceFile.text)
-          /*if (!oapiSchemas[name]) {
-            const { data } = convertCoreTypesToOpenApi(convertTypeScriptToCoreTypes(sourceFile.text).data, { title: undefined })
-            for (const key of Object.keys(data.components.schemas)) {
-              if (typesInUse.includes(key)) oapiSchemas[key] = data.components.schemas[key]
-            }
-          }
-          */
+          methods.push({ name, type,isAsync, parameters, jsDoc })
         }
       }
-    })
-  }
-  return {oapiSchemas,schemas}
-}
-
-export async function compileundparse(fileName, outDir) {
-  const { program:main, root:compiledFilename } = await compile(fileName, outDir)
-  //const compiledFilename = root //resolve(emittedFile)
-  const { imports, methods } = getImportsundMethods(main, fileName)
-  if (process.stdout.isTTY) console.log('parsed', chalk.green(fileName), 'imports:', Object.keys(imports).join(';'), 'methods:', methods.map(({ name }) => name).join(';'))
-  // uniq param and return types
+      )
+      for (const {parent:node} of sourceFile.imports){
+        const moduleSpecifier = node.moduleSpecifier.text
+        if (!imports[moduleSpecifier]) imports[moduleSpecifier] = []
+        for (const element of node.importClause.namedBindings.elements) {
+          // import {x as y} from '...'
+          if (element.propertyName){
+            const name = element.name.escapedText
+            const realname =  element.propertyName.escapedText
+            imports[moduleSpecifier].push(`${realname} as ${name}`)
+          } else imports[moduleSpecifier].push(element.name.escapedText)
+        }
+      }
+    }
   let typesInUse = [...new Set(methods.map(({ parameters }) => parameters.map(({ type }) => type)).flat())].filter((x) => !primitives.includes(x))
-  typesInUse = [...new Set([...typesInUse, ...new Set(methods.map(({ type }) => type))])]
-  const {schemas} = getSchemas(main, typesInUse)
-
-  if (process.stdout.isTTY) for (const key of Object.keys(schemas)){
-    console.log('parsed', chalk.green(key), 'schemas:', schemas[key].data.types.map(({name})=>name).join(';'))
-  }
-
-  return { imports, schemas, methods, compiledFilename }
+  typesInUse = [...new Set([...typesInUse, ...new Set(methods.map(({ type }) => type).filter((x) => !primitives.includes(x)))])]
+  const x = geetTypes(typesInUse,mainFileName,main)
+  return { imports, types:typesInUse, interfaces:x,methods }
 }
 
-//const r = await compileundparse(process.argv.slice(2)[0])
-//console.log(chalk.green(JSON.stringify(r,null,4)))
+
+function geetTypes(types, filename, main){
+  const result = {}
+  const sourceFile = main.getSourceFile(filename)
+  const coreTypes = convertTypeScriptToCoreTypes(sourceFile.text)
+  const refs = []
+  const needed = coreTypes.data.types.filter(({name})=> types.includes(name))
+  for (const type of needed){
+    const {name, properties} = type
+    result[name] = type
+    result[name].orig = filename
+    for (const key of Object.keys(properties)) {
+      const ref = properties[key].node.ref
+      if (ref && !types.includes(ref)){
+        refs.push(ref)
+      }
+    }
+  }
+  const found = Object.keys(result)
+  const notFound = [...new Set([...refs,...types])].filter(x => !found.includes(x))
+  if (notFound.length){
+    // TODO there is list of imports ..
+    // for now just brute force over all imports
+    for (const node of sourceFile.imports){
+      const y = geetTypes(notFound, resolve(join(dirname(sourceFile.path)),dirname(node.text),basename(node.text,'.mjs')+'.mts'), main)
+      for (const key of Object.keys(y)){
+        result[key] = y[key]
+      }
+    }
+  }
+  return result
+}
+
+
+export async function compileundparse(fileName, outDir,rootDir, paths) {
+  const { program:main, root:compiledFilename } = await compile(fileName, outDir,rootDir, paths)
+  const { imports, methods, types, interfaces } = getImportsundMethods(main, fileName)
+  if (process.stdout.isTTY) {
+    console.log('parsed', chalk.green(fileName))
+    console.log('imports:', chalk.blue(Object.keys(imports).join(';')))
+    console.log('interfaces:', chalk.blue(Object.keys(interfaces).join(';')))
+    console.log('methods:', chalk.blue(methods.map(({ name }) => name).join(';')))
+}
+  return { imports, interfaces, methods, compiledFilename }
+}
