@@ -199,60 +199,7 @@ const schemas = {version: 1, types }
 
 //console.log(JSON.stringify(toOpenApi(schemas).data,null,4))
 
-function toPolka(){
-
-let polkaStr = `
-// generated ${JSON.stringify(new Date())}
-// ${resolve(join('./',outDir))}
-import { STATUS_CODES as HTTP_STATUS_CODES } from 'node:http'
-import { default as polka } from 'polka'
-/*IMPORTS*/
-
-function maybeExit(error){
-  if (error instanceof RangeError) {
-    console.error(error)
-    process.exit(1)
-  }
-  if (error instanceof SyntaxError) {
-    console.error(error)
-    process.exit(2)
-  }
-  if (error instanceof ReferenceError) {
-    console.error(error)
-    process.exit(3)
-  }
-  if (error instanceof TypeError) {
-    console.error(error)
-    process.exit(4)
-  }
-  if (error instanceof AggregateError) {
-    console.error(error)
-    process.exit(5)
-  }
-  if (error instanceof EvalError) {
-    console.error(error)
-    process.exit(6)
-  }
-}
-
-
-polka({onError:(err, req, res)=>{
-  console.error('custom onError')
-  console.error(err)
-  let code = typeof err.status === 'number' && err.status;
-  code = res.statusCode = (code && code >= 100 ? code : 422);
-  if (typeof err === 'string' || Buffer.isBuffer(err)) res.end(err);
-  else res.end(err.message || HTTP_STATUS_CODES[code]);
-  maybeExit(err)
-}})
-/*ROUTES*/
-    .listen(3000, (l) => {
-      console.log("> Running on localhost:3000");
-    })
-
-`
-
-
+export function toPolka(polkaStr,parsed,outDir,defaultPort){
 
 let curlStr = ""
 let routesStr = ""
@@ -303,6 +250,8 @@ for (const route of parsed){
 
 polkaStr = polkaStr.replace('/*IMPORTS*/',importsStr)
 polkaStr = polkaStr.replace('/*ROUTES*/',routesStr)
+polkaStr = polkaStr.replace('/*DEFAULTPORT*/',defaultPort||9876)
+return polkaStr
 }
 
 /*

@@ -1,5 +1,5 @@
 import { Cli } from './utils/cli.mjs'
-import { parseAllMTS } from './yafbrg.mjs'
+import { parseAllMTS, toPolka } from './yafbrg.mjs'
 import { mkdirSync, readFileSync, writeFileSync, accessSync, constants } from 'node:fs'
 import { join, dirname } from 'node:path'
 
@@ -66,6 +66,12 @@ try {
   export function dummy(n:number):string{
     return ''
   }
+  `,
+  dummypackage:`
+  {
+    "name": "DUMMY",
+    "version": "0.0.0"
+  }
   `
 
 }
@@ -100,11 +106,10 @@ const TEMPLATESUFFIX = '-server.template.mjs'
 
 class YAFBRG_Cli extends Cli{
   constructor(){
-
-    super({workDir:`./${framework()}`,outDir:`./.${framework()}-build`},{port, framework, production})
+    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production})
   }
   async build(){
-
+    const dev = process.env.NODE_ENV !== "production";
     if (!this.workDir.startsWith('./')) this.workDir = './'+this.workDir
     const srcDir = join(this.workDir,SRCPATH)
     const routesDir = join(this.workDir,SRCPATH,ROUTESPATH)
@@ -167,10 +172,21 @@ class YAFBRG_Cli extends Cli{
     }
     console.log('compiling with tsc ..')
 
-    const {schemas,parsed:paths} = await parseAllMTS(srcDir,this.outDir,this.workDir)
+    const {schemas,parsed:paths} = await parseAllMTS(routesDir,this.outDir,this.workDir)
     console.dir(paths)
+    const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
+    if (fsExistsundWritable(templateFilename)){
+      const templateServer = readFileSync(templateFilename,'utf-8')
+      const serverSource = toPolka(templateServer,paths,join(this.outDir,SRCPATH),this.port)
+      const serverFilename = join(this.outDir,SRCPATH,this.framework+'-server.mjs')
+      writeFileSync(serverFilename,serverSource)
+    } else {
+      console.error('cant find server template file', templateFilename)
+    }
+
   }
 }
+
 
 const cli = new YAFBRG_Cli()
 await cli.build()

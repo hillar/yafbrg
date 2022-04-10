@@ -1,1 +1,0 @@
-../../../jenka/src/interfaces/foo/bar.mts
