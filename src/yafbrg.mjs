@@ -121,14 +121,15 @@ async function findAllMTS(dirName){
   return result
 }
 
+/*
 const routes = process.argv.slice(2)[0] || './routes'
 const out = './.buildkala'
 const root = dirname(routes)+'/' || './'
 
 const x = await parseAllMTS(routes,out,root)
 console.dir({x})
-
-async function parseAllMTS(routesDir,outDir,rootDir){
+*/
+export async function parseAllMTS(routesDir,outDir,rootDir){
   console.dir({parseAllMTS:{routesDir,outDir,rootDir}})
 const prepRoutes = await findAllMTS(routesDir)
 //console.dir(prepRoutes)

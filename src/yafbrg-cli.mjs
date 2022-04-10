@@ -1,4 +1,5 @@
 import { Cli } from './utils/cli.mjs'
+import { parseAllMTS } from './yafbrg.mjs'
 import { mkdirSync, readFileSync, writeFileSync, accessSync, constants } from 'node:fs'
 import { join, dirname } from 'node:path'
 
@@ -17,7 +18,9 @@ const TEMPLATES = {
   polka: `
 import { default as polka } from 'polka'
 /*IMPORTS*/
+
 const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
+
 polka()
 /*ROUTES*/
     .listen(LISTENPORT, (l) => {
@@ -27,14 +30,30 @@ polka()
   express:`
 import { default as express } from 'express'
 /*IMPORTS*/
+
 const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
+
 express()
 /*ROUTES*/
-    .listen(LISTENPORT, (l) => {
-      console.log("> Express server running on localhost:",LISTENPORT);
-    })
+.listen(LISTENPORT, (l) => {
+  console.log("> Express server running on localhost:",LISTENPORT);
+})
   `,
   fastify: `
+import { default as fastify } from 'fastify';
+/*IMPORTS*/
+
+const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
+
+fastify.route(/*ROUTES*/)
+
+try {
+  await fastify.listen(3000)
+} catch (err) {
+  fastify.log.error(err)
+  process.exit(1)
+}
+
   `,
   dummyroute:`
   import {dummy} from '$providers/dummy.mjs'
@@ -82,21 +101,22 @@ const TEMPLATESUFFIX = '-server.template.mjs'
 class YAFBRG_Cli extends Cli{
   constructor(){
 
-    super({workDir:framework(),outDir:'./.build'},{port, framework, production})
+    super({workDir:`./${framework()}`,outDir:`./.${framework()}-build`},{port, framework, production})
   }
-  build(){
+  async build(){
 
     if (!this.workDir.startsWith('./')) this.workDir = './'+this.workDir
-
+    const srcDir = join(this.workDir,SRCPATH)
+    const routesDir = join(this.workDir,SRCPATH,ROUTESPATH)
     // there is no workir, make one
     if (!fsExistsundWritable(this.workDir)) {
           console.log('bootstraping ...')
       mkdirSync(this.workDir)
-      const srcDir = join(this.workDir,SRCPATH)
+
       if (!fsExistsundWritable(srcDir)) mkdirSync(srcDir)
       const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
       if (!fsExistsundWritable(templateFilename)) writeFileSync(templateFilename,TEMPLATES[this.framework])
-      const routesDir = join(this.workDir,SRCPATH,ROUTESPATH)
+
       if (!fsExistsundWritable(routesDir)) mkdirSync(routesDir)
       const defaultroutepreffix = 'api/v1'
       const defaultroutes = [
@@ -145,8 +165,12 @@ class YAFBRG_Cli extends Cli{
         }
       }
     }
+    console.log('compiling with tsc ..')
+
+    const {schemas,parsed:paths} = await parseAllMTS(srcDir,this.outDir,this.workDir)
+    console.dir(paths)
   }
 }
 
 const cli = new YAFBRG_Cli()
-cli.build()
+await cli.build()
