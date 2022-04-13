@@ -59,7 +59,7 @@ const print_r = (obj, t) => {
 // and bar__ asj postprocess
 
 function getRoute(str){
-  const denotes = ['*',':','[','__']
+  const denotes = ['*',':','[','__','{']
   let min = Infinity
   for (const d of denotes){
     const hit = str.indexOf(d)
@@ -71,7 +71,7 @@ function getRoute(str){
   return result
 }
 
-function parse(orig, loose) {
+export function parseRoute(orig, loose) {
     //if (str instanceof RegExp) return { keys:false, pattern:str };
     let c;
     let o;
@@ -87,10 +87,10 @@ function parse(orig, loose) {
   		if (c === '*') {
   			keys.push('wild');
   			pattern += '/(.*)';
-  		} else if (c === ':' || c === '[') {
+  		} else if (c === ':' || c === '[' || c === '{') {
   			o = tmp.indexOf('?', 1);
   			ext = tmp.indexOf('.', 1);
-  			keys.push( tmp.substring(1, !!~o ? o : !!~ext ? ext : tmp.length).replace(']','') );
+  			keys.push( tmp.substring(1, !!~o ? o : !!~ext ? ext : tmp.length).replace(']','').replace('}','') );
   			pattern += !!~o && !~ext ? '(?:/([^/]+?))?' : '/([^/]+?)';
   			if (!!~ext) pattern += `${!!~o ? '?' : ''}\\${tmp.substring(ext)}`;
   		} else {
@@ -98,8 +98,14 @@ function parse(orig, loose) {
   		}
   	}
     const route = getRoute(orig)
+    const polkafied = orig.replaceAll("]",'').replaceAll("}",'').replaceAll("[",":").replaceAll("{",":")
+    let bittes = polkafied.split('/')
+    bittes = bittes.map(x=>x.startsWith(':')?`{${x.replace(':','')}}`:x)
+    const curlified = bittes.join('/')
     return {
       orig,
+      polkafied,
+      curlified,
       route,
   		keys,
   		pattern: new RegExp(`^${pattern}${loose ? '(?=$|\/)' : '\/?$'}`, 'i')
@@ -129,7 +135,7 @@ const root = dirname(routes)+'/' || './'
 const x = await parseAllMTS(routes,out,root)
 console.dir({x})
 */
-export async function parseAllMTS(routesDir,outDir,rootDir){
+export async function parseAllMTS(routesDir,outDir,rootDir,pathAliases){
   console.dir({parseAllMTS:{routesDir,outDir,rootDir}})
 const prepRoutes = await findAllMTS(routesDir)
 //console.dir(prepRoutes)
@@ -153,12 +159,7 @@ for (const route of parsed) {
 for (const route of parsed) {
   //const dn = dirname(route.mts)
 
-  const pathsT = {
-    '$providers/*': ['./src/providers'+ '/*'],
-    '$interfaces/*': ['./src/interfaces'+ '/*'],
-  }
-
-  const compiled = await compileundparse(route.mts,outDir,rootDir,pathsT)
+  const compiled = await compileundparse(route.mts,outDir,rootDir,pathAliases)
   for (const key of Object.keys(compiled)) route[key] = compiled[key]
   if (route.compiledFilename) {
     try {
@@ -199,18 +200,20 @@ const schemas = {version: 1, types }
 
 //console.log(JSON.stringify(toOpenApi(schemas).data,null,4))
 
-export function toPolka(polkaStr,parsed,outDir,defaultPort){
-
+export function toPolka(polkaStr,routes,outDir,defaultPort){
+//console.dir({routes,outDir,defaultPort})
 let curlStr = ""
 let routesStr = ""
 let importsStr = ""
-for (const route of parsed){
-
-  const polkafied = route.orig.replaceAll("]",'').replaceAll("[",":")
+//for (const route of parsed){
+routes.forEach(({route, methods })=> {
+  //const {route, methods } = value
+  const polkafied = route.orig.replaceAll("]",'').replaceAll("}",'').replaceAll("[",":").replaceAll("{",":")
   let bittes = []
   for (let bitte of polkafied.replaceAll(":","").split('/')) if (bitte?.[0]) bittes.push(bitte?.[0]?.toUpperCase() + bitte?.substring(1))
   const importsAs = []
-  for (const method of route.methods) {
+  for (const method of methods) {
+
     curlStr += `curl -s -v -X${method.name.toUpperCase()} localhost:3000${route.route}/`
     const importAs = `${method.name}${bittes.join('')}`
     importsAs.push(`${method.name} as ${importAs} `)
@@ -232,21 +235,26 @@ for (const route of parsed){
       res.end(''+${isAwait} ${importAs}(${args}))`
 
     }
+    // delete is reserved word, so **del** must be used as method name in modules
+    // replace it here
+    let methodName = method.name
+    if (method.name === 'del') methodName = 'delete'
     // https://nodejs.org/en/docs/guides/nodejs-docker-webapp/
     // RUN npm ci --only=production
     const logifnotproduction = process.env.NODE_ENV === 'production' ?
     ``
     :
-    `console.log('${method.name}','${polkafied}',req.params,req.query)
+    `console.log('${methodName}','${polkafied}',req.params,req.query)
     `
     routesStr += `
-    .${method.name}('${polkafied}', ${isAsync} (req, res, next) => {
+    .${methodName}('${polkafied}', ${isAsync} (req, res, next) => {
       ${logifnotproduction} ${send}
     })`
   }
-  console.dir(route)
-  importsStr += `import { ${importsAs.join(', ')}} from '${route.compiledFilename.replace(outDir,'.')}'\n`
-}
+  //console.log(outDir,route.compiledFilename,route.compiledFilename.replace(outDir,'.'))
+  //TODO basename mts -> mjs
+  importsStr += `import { ${importsAs.join(', ')}} from '${route.compiledFilename.replace(outDir,'.').replace('.mts','.mjs')}'\n`
+})
 
 polkaStr = polkaStr.replace('/*IMPORTS*/',importsStr)
 polkaStr = polkaStr.replace('/*ROUTES*/',routesStr)

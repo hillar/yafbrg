@@ -1,5 +1,7 @@
 # yafbrg
 
+> мысли короткие как у буратино
+
 *yet another filesystem based route generation*
 
 **highly opinionated**

@@ -8,9 +8,11 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^17.0.23",
+    "chokidar": "^3.5.3",
     "core-types-graphql": "^1.4.0",
     "core-types-json-schema": "^1.6.2",
     "core-types-ts": "^1.5.0",
+    "execa": "^6.1.0",
     "typescript": "^4.7.0-dev.20220330",
     "typescript-transform-paths": "^3.3.1"
   }

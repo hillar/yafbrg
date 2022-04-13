@@ -76,7 +76,7 @@ async function compile(filename, outDir, rootDir, paths) {
 
 // TODO return only functions with HTTP method name
 // TODO do not include imported but not used
-function getImportsundMethods(main, mainFileName) {
+function getImportsundMethods(main, mainFileName ) {
   // Get the checker, we will use it to find types
   let checker = main.getTypeChecker()
   function getParam(parameter) {
@@ -179,7 +179,15 @@ function geetTypes(types, filename, main){
     // TODO there is list of imports ..
     // for now just brute force over all imports
     for (const node of sourceFile.imports){
-      const y = geetTypes(notFound, resolve(join(dirname(sourceFile.path)),dirname(node.text),basename(node.text,'.mjs')+'.mts'), main)
+      //console.dir({path:sourceFile.path,t:node.text})
+      //(moduleName: string, containingFile: string, options: CompilerOptions, moduleResolutionHost: ModuleResolutionHost)
+      // resolve $
+      const { resolvedModule } = ts.resolveModuleName(node.text,sourceFile.path,main.getCompilerOptions(),main)
+      //console.dir(resolvedModule)
+      //const vana = resolve(join(dirname(sourceFile.path)),dirname(node.text),basename(node.text,'.mjs')+'.mts')
+      //console.dir({vana})
+      const { resolvedFileName } = resolvedModule
+      const y = geetTypes(notFound, resolvedFileName, main)
       for (const key of Object.keys(y)){
         result[key] = y[key]
       }
@@ -191,7 +199,7 @@ function geetTypes(types, filename, main){
 
 export async function compileundparse(fileName, outDir,rootDir, paths) {
   const { program:main, root:compiledFilename } = await compile(fileName, outDir,rootDir, paths)
-  const { imports, methods, types, interfaces } = getImportsundMethods(main, fileName)
+  const { imports, methods, types, interfaces } = getImportsundMethods(main, fileName )
   if (process.stdout.isTTY) {
     console.log('parsed', chalk.green(fileName))
     console.log('imports:', chalk.blue(Object.keys(imports).join(';')))

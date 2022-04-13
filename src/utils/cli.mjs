@@ -43,9 +43,11 @@ export class Cli extends Settable {
         process.exit(1)
       }
     }
+    /*
     if (process.stdout.isTTY) {
       console.log(this.prototypeof.toLowerCase(),'starting with:',this.defaults)
     }
+    */
   }
   help(){
     const defaults = this.defaults
