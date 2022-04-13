@@ -440,14 +440,17 @@ async function restart(path){
     console.dir({running:timeoutId})
   }
   clearTimeout(timeoutId)
-  // collect changes
+  // collect changes, but dedup with last event
+  let isprev = false
   if (paths.length) {
     for (const prev of paths){
-      if (prev.filename === path.filename)
-      prev.event = path.event
+      if (prev.filename === path.filename) {
+        prev.event = path.event
+        isprev = true
+      }
     }
   }
-  paths.push(path)
+  if (!isprev) paths.push(path)
   timeoutId = setTimeout(async () => {
     if (!paths.length) return
     running = true
