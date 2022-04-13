@@ -1,6 +1,7 @@
 import { IUser } from '$interfaces/users.mjs'
 import { getUser } from '$providers/users.mjs'
 
+
 /**
 *
 * returns user by id

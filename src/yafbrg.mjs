@@ -217,12 +217,16 @@ routes.forEach(({route, methods })=> {
     curlStr += `curl -s -v -X${method.name.toUpperCase()} localhost:3000${route.route}/`
     const importAs = `${method.name}${bittes.join('')}`
     importsAs.push(`${method.name} as ${importAs} `)
+    // check if method params are simple or complex
     // put arg in func param order
-    const _args = method.parameters.map(({name})=>name)
+    //const _args = method.parameters//.map(({name,type})=>{name,type})
     const args = []
-    for (const arg of _args) {
-      if (route.keys.includes(arg)) args.push(`req?.params?.${arg}`)
-      else args.push(`req?.query?.${arg}`)
+    // TODO prep validate here
+    for (const {name,type,required} of method.parameters) {
+      //console.dir({name,type,required})
+      if (!primitives.includes(type)) args.push(`req?.body?.${name}`)
+      else if (route.keys.includes(name)) args.push(`req?.params?.${name}`)
+      else args.push(`req?.query?.${name}`)
     }
     let isAwait = method.isAsync ? 'await' : ''
     let isAsync = method.isAsync ? 'async' : ''
@@ -244,7 +248,7 @@ routes.forEach(({route, methods })=> {
     const logifnotproduction = process.env.NODE_ENV === 'production' ?
     ``
     :
-    `console.log('${methodName}','${polkafied}',req.params,req.query)
+    `console.log('${methodName}','${polkafied}',req?.params,req?.query,JSON.stringify(req?.body,null,4))
     `
     routesStr += `
     .${methodName}('${polkafied}', ${isAsync} (req, res, next) => {

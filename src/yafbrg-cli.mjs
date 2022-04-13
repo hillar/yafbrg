@@ -29,6 +29,23 @@ import { default as polka } from 'polka'
 const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
 
 polka()
+.use( (req,res,next) => {
+  const body = []
+  req.on('data', async (chunk) => { body.push(chunk) })
+  req.on('end',async () => {
+    try {
+      req.body = JSON.parse(Buffer.concat(body).toString())
+      next()
+    } catch (error) {
+      res.statusCode = 415
+      res.end('not json')
+    }
+  })
+  req.on('error', (error) => {
+    res.statusCode = 500
+    res.end()
+  })
+})
 /*ROUTES*/
 // https://github.com/braidn/tiny-graphql/blob/master/index.mjs
 .listen(LISTENPORT, (l) => {
@@ -217,6 +234,7 @@ class YAFBRG_Cli extends Cli{
           writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyinterface'])
         }
       }
+      // TODO dev pacgages like body-parser
       execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.framework}`,{shell:true,stdio: 'inherit'})
       //.stdout.pipe(process.stdout)
       //.stderr.pipe(process.stderr)
