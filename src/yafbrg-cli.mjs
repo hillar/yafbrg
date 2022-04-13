@@ -370,7 +370,7 @@ class YAFBRG_Cli extends Cli{
         let mn = method.name
         if (mn==="del") mn = 'delete'
         openapi.paths[route.curlified][mn] = {parameters:[],responses:{"200":{"description":"",content:{}}}}
-        openapi.paths[route.curlified][mn].summary = method.jsDoc.join(' ')
+        openapi.paths[route.curlified][mn].summary = method?.jsDoc?.join(' ') || ''
         //openapi.paths[route.curlified][mn].parameters.push(...)
         for (const {name,type,required} of method.parameters){
           const tmp = {name,required}
