@@ -253,13 +253,20 @@ class YAFBRG_Cli extends Cli{
   async rebuild(filenames){
     //console.dir({rebuild:filenames,routesDir:this.routesDir})
     const updates = []
+    const failed = []
     for (const {event,filename} of filenames.filter(({event})=>event!=='unlink')) {
       if (!filename.endsWith('.mts')) continue
       if (!filename.startsWith(this.routesDir)) continue
       const parsed = await compileundparse(filename,this.outDir,this.workDir,this.pathAliases)
-      //console.dir(filename)
-      //console.dir(parsed)
+      const { interfaces, methods } = parsed
+      if (!(interfaces && methods)) failed.push(filename)
       updates.push({filename,parsed})
+    }
+    if (failed.length){
+      console.error('*** FAILED TSC ***')
+      console.error(failed)
+      console.error('***  ***')
+      return false
     }
     return this.cacheUpdate(updates,filenames.filter(({event})=>event==='unlink').map(({filename})=>filename))
   }
@@ -300,8 +307,6 @@ class YAFBRG_Cli extends Cli{
               paramWarnings.push({missing:{route:route.orig,method:method.name,inpath}})
             }
           }
-          console.dir(mp)
-          console.dir(route.keys)
         }
         methods.push(method)
       }
@@ -311,7 +316,9 @@ class YAFBRG_Cli extends Cli{
         if (this.cached.schemas.has(maybeInterface)) {
             const prev = this.cached.schemas.get(maybeInterface)
             const canditate = interfaces[maybeInterface]
-            console.dir({prev,canditate})
+            if (prev.orig !== canditate.orig) {
+              schemaConflicts.push({interface:maybeInterface,a:prev.orig,b:canditate.orig})
+            }
         } else {
           this.cached.schemas.set(maybeInterface,interfaces[maybeInterface])
         }

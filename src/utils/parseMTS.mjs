@@ -68,7 +68,7 @@ async function compile(filename, outDir, rootDir, paths) {
   })
 
   let exitCode = emitResult.emitSkipped ? 1 : 0
-  if (exitCode) process.exit(exitCode)
+  if (exitCode) return {}
   const tmp = join(basename(dirname(filename)),basename(filename,'.mts')+'.mjs')
   const root = emitResult.emittedFiles.filter(x=>x.endsWith(tmp)).pop()
   return { program, root, emittedFiles: [...emitResult.emittedFiles.map(x=>resolve(x))]}
@@ -199,12 +199,13 @@ function geetTypes(types, filename, main){
 
 export async function compileundparse(fileName, outDir,rootDir, paths) {
   const { program:main, root:compiledFilename } = await compile(fileName, outDir,rootDir, paths)
+  if (!(main && compiledFilename)) return {}
   const { imports, methods, types, interfaces } = getImportsundMethods(main, fileName )
   if (process.stdout.isTTY) {
     console.log('parsed', chalk.green(fileName))
     console.log('imports:', chalk.blue(Object.keys(imports).join(';')))
     console.log('interfaces:', chalk.blue(Object.keys(interfaces).join(';')))
     console.log('methods:', chalk.blue(methods.map(({ name }) => name).join(';')))
-}
+  }
   return { imports, interfaces, methods, compiledFilename }
 }
