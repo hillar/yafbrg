@@ -2,9 +2,9 @@
 
 > мысли короткие как у буратино
 
-*yet another filesystem based route generation*
+*yet another filesystem based route  generation*
 
-**highly opinionated**
+***highly opinionated***
 
 *(with API description generated from source files)*
 
@@ -12,6 +12,117 @@
 This is highly experimental, highly incomplete, and completely undocumented.
 
 For now, a traditional development setup will be more productive.
+
+
+* source **src/routes/users/[id]/index.mts**
+
+
+
+```typescript
+import { IUser } from '$interfaces/user.mjs'
+import { getUser } from '$providers/user.mjs'
+
+/**
+* returns user by id
+*/
+export async function get(id:number):IUser {
+  return getUser(id)
+}
+
+```
+* generated **src/polka-server.mjs**
+```javascript
+import { polka } from 'polka'
+import { get as getUserId } from './routes/users/[id]/index.mjs'
+
+polka()
+.get('/users/:id', (req, res) => {
+  res.setHeader('conten-type','application/json; charset=UTF-8')
+  res.end( getUserId(req.params.id) );
+})
+
+
+```
+* generated **src/openapi.json**
+
+```json
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "0.0.1",
+    "title": "./polka"
+  },
+  "paths": {
+    "/users/{id}/": {
+      "get": {
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "number"
+            },
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IUser"
+                }
+              }
+            }
+          }
+        },
+        "summary": "returns user by id"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "IUser": {
+        "properties": {
+          "id": {
+            "title": "IUser.id",
+            "type": "number"
+          },
+          "firstname": {
+            "title": "IUser.firstname",
+            "type": "string"
+          },
+          "lastname": {
+            "title": "IUser.lastname",
+            "type": "string"
+          },
+          "ou": {
+            "title": "IUser.ou",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "firstname",
+          "lastname",
+          "ou"
+        ],
+        "additionalProperties": false,
+        "title": "IUser",
+        "type": "object"
+      }
+    }
+  }
+}
+
+```
+
+
+
+
+
+---------------------
 
 
 ## SSOT
@@ -32,7 +143,7 @@ For example, function `function get(id:number):string` in */users/[id].mts* is  
 
 and from TypeScript source is compiled to
 
-```
+```javascript
 import { get as getUserId } from './users/[id].mjs'
 
 polka() // You can also use Express
