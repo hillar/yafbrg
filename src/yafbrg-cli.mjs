@@ -312,10 +312,12 @@ class YAFBRG_Cli extends Cli{
       }
       this.cached.routes.set(route.pattern.toString(),{route,methods})
 
+      //TODO interfaces are deduped before reaching here ;/
       for (const maybeInterface of Object.keys(interfaces)){
         if (this.cached.schemas.has(maybeInterface)) {
             const prev = this.cached.schemas.get(maybeInterface)
             const canditate = interfaces[maybeInterface]
+            //console.dir({b:(prev.orig !== canditate.orig),prev,canditate})
             if (prev.orig !== canditate.orig) {
               schemaConflicts.push({interface:maybeInterface,a:prev.orig,b:canditate.orig})
             }
@@ -323,26 +325,24 @@ class YAFBRG_Cli extends Cli{
           this.cached.schemas.set(maybeInterface,interfaces[maybeInterface])
         }
       }
-
     }
+
     if (routeConflicts.length) {
       console.error('*** ROUTE CONFLICTS ***')
       console.error(routeConflicts)
       console.error('***  ***')
-      return false
     }
     if (schemaConflicts.length) {
       console.error('*** SCHEMA CONFLICTS ***')
       console.error(schemaConflicts)
       console.error('***  ***')
-      return false
     }
     if (paramWarnings.length){
       console.error('*** MISSING INPATH PARAMS ***')
       console.error(paramWarnings)
       console.error('***  ***')
-      return false
     }
+    if (paramWarnings.length || schemaConflicts.length || routeConflicts.length) return false
 
 
 
