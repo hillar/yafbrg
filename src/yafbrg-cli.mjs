@@ -441,6 +441,12 @@ async function restart(path){
   }
   clearTimeout(timeoutId)
   // collect changes
+  if (paths.length) {
+    for (const prev of paths){
+      if (prev.filename === path.filename)
+      prev.event = path.event
+    }
+  }
   paths.push(path)
   timeoutId = setTimeout(async () => {
     if (!paths.length) return
@@ -451,14 +457,18 @@ async function restart(path){
     if (subprocessServer?.kill && !subprocessServer.killed) await subprocessServer.kill('SIGTERM', {
       forceKillAfterTimeout: 1
     });
-    if (await cli.rebuild(paths)){
+    const buildResult = await cli.rebuild(paths)
+    if (buildResult){
       console.log('restarting ..',serverFilename)
       subprocessServer = execa(`node`,[`${serverFilename}`] )
       subprocessServer.stdout.pipe(process.stdout)
       subprocessServer.stderr.pipe(process.stderr)
       running = false
+      paths = []
+    } else {
+      // rebuild failed, keep paths
     }
-    paths = []
+    //paths = []
     /*
     console.log('restarting ..',serverFilename)
     if (subprocessServer?.kill && !subprocessServer.killed) await subprocessServer.kill('SIGTERM', {
