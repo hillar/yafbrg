@@ -274,6 +274,7 @@ class YAFBRG_Cli extends Cli{
     // routes map
     const routeConflicts = []
     const schemaConflicts = []
+    const paramWarnings = []
     for (const { filename,parsed } of updates ){
       const cleaned = filename.replace(this.routesDir,'').replace('index.mts','').replace('.mts','')
       const route = parseRoute(cleaned)
@@ -292,12 +293,21 @@ class YAFBRG_Cli extends Cli{
       const { methods:maybeMethods, interfaces} = parsed
       for (const method of maybeMethods) {
         if (!ALLOWEDMETHODS.includes(method.name.toUpperCase())) continue
+        if (route.keys.length) {
+          const mp = method.parameters.map(({name})=>name)
+          for (const inpath of route.keys) {
+            if (!mp.includes(inpath)){
+              paramWarnings.push({missing:{route:route.orig,method:method.name,inpath}})
+            }
+          }
+          console.dir(mp)
+          console.dir(route.keys)
+        }
         methods.push(method)
       }
       this.cached.routes.set(route.pattern.toString(),{route,methods})
 
       for (const maybeInterface of Object.keys(interfaces)){
-
         if (this.cached.schemas.has(maybeInterface)) {
             const prev = this.cached.schemas.get(maybeInterface)
             const canditate = interfaces[maybeInterface]
@@ -317,6 +327,12 @@ class YAFBRG_Cli extends Cli{
     if (schemaConflicts.length) {
       console.error('*** SCHEMA CONFLICTS ***')
       console.error(schemaConflicts)
+      console.error('***  ***')
+      return false
+    }
+    if (paramWarnings.length){
+      console.error('*** MISSING INPATH PARAMS ***')
+      console.error(paramWarnings)
       console.error('***  ***')
       return false
     }
@@ -341,8 +357,6 @@ class YAFBRG_Cli extends Cli{
     tmp = []
     this.cached.routes.forEach(({route, methods})=>{
       tmp.push(route.orig)
-      console.dir(route)
-      console.dir(methods)
       // "/api/target/{slug}/cases":
       openapi.paths[route.curlified] = {}
       for (const method of methods){
@@ -371,12 +385,11 @@ class YAFBRG_Cli extends Cli{
     const openApiFilename = join(this.srcDir,OPENAPIFILENAME)
     writeFileSync(openApiFilename,JSON.stringify(openapi))
     // generate docs
-    execaCommandSync(`cd "${this.docsDir}" &&  ${this.docsgenerator} ../${SRCPATH}/${OPENAPIFILENAME}`,{shell:true,stdio: 'inherit'})
-    // TODO test openapi with some generator
-    // /usr/local/bin/openapi-generator generate -i ../../src/openapi.json -g python
-    // /usr/local/bin/openapi-generator generate -i ../../src/openapi.json -g markdown
-
-
+    try {
+      execaCommandSync(`cd "${this.docsDir}" &&  ${this.docsgenerator} ../${SRCPATH}/${OPENAPIFILENAME}`,{shell:true,stderr: 'inherit'})
+    } catch (e) {
+      return false
+    }
 
     // make server
     const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
