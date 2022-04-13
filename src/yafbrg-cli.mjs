@@ -269,7 +269,6 @@ class YAFBRG_Cli extends Cli{
   }
 
   async rebuild(filenames){
-    //console.dir({rebuild:filenames,routesDir:this.routesDir})
     const updates = []
     const failed = []
     for (const {event,filename} of filenames.filter(({event})=>event!=='unlink')) {
@@ -390,15 +389,46 @@ class YAFBRG_Cli extends Cli{
         openapi.paths[route.curlified][mn] = {parameters:[],responses:{"200":{"description":"",content:{}}}}
         openapi.paths[route.curlified][mn].summary = method?.jsDoc?.join(' ') || ''
         //openapi.paths[route.curlified][mn].parameters.push(...)
+        const requestBodyproperties = {}
+        let requestBodyRequired = false
         for (const {name,type,required} of method.parameters){
           const tmp = {name,required}
           tmp.schema = {}
-          if (primitives.includes(type)) tmp.schema.type = type
-          else tmp.schema = {"$ref":`#/components/schemas/${type}`}
-          if (route.keys.includes(name)) tmp.in = 'path'
-          else tmp.in = 'query'
-          openapi.paths[route.curlified][mn].parameters.push(tmp)
+          if (primitives.includes(type)) {
+            tmp.schema.type = type
+            if (route.keys.includes(name)) tmp.in = 'path'
+            else tmp.in = 'query'
+            openapi.paths[route.curlified][mn].parameters.push(tmp)
+          } else {
+            tmp.schema = {"$ref":`#/components/schemas/${type}`}
+            requestBodyproperties[name] ={"$ref":`#/components/schemas/${type}`,required}
+            if (required) requestBodyRequired = true
+          }
+
+          //openapi.paths[route.curlified][mn].parameters.push(tmp)
         }
+        if (Object.keys(requestBodyproperties).length) {
+          openapi.paths[route.curlified][mn].requestBody = {required:requestBodyRequired}
+          openapi.paths[route.curlified][mn].requestBody.content = {"application/json":{schema:{type: "object",properties:requestBodyproperties}}}
+        }
+        /*
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kala": {
+                    "$ref": "#/components/schemas/IDummy",
+                    "title": "IxDummy.backend2"
+                  }
+                },
+              }
+            }
+          }
+        }
+        */
         if (primitives.includes(method.type)){
           openapi.paths[route.curlified][mn].responses['200'].content["text/plain"] = {schema:{type:method.type}}
         } else {
@@ -440,14 +470,7 @@ await cli.firstrun()
 const serverFilename = join('./',cli.outDir,SRCPATH,cli.framework+'-server.mjs')
 // console.log('starting ..',serverFilename)
 let subprocessServer
-/*
-try {
-subprocessServer = execa(`node`,[`${serverFilename}`] )//, {signal: abortServer.signal}).stdout.pipe(process.stdout);
-subprocessServer.stdout.pipe(process.stdout)
-} catch (eee) {
-  console.dir({eee})
-}
-*/
+
 
 let paths = []
 let timeoutId

@@ -149,8 +149,9 @@ function getImportsundMethods(main, mainFileName ) {
         }
       }
     }
-  let typesInUse = [...new Set(methods.map(({ parameters }) => parameters.map(({ type }) => type)).flat())].filter((x) => !primitives.includes(x))
-  typesInUse = [...new Set([...typesInUse, ...new Set(methods.map(({ type }) => type).filter((x) => !primitives.includes(x)))])]
+  const typesInParams = [...new Set(methods.map(({ parameters }) => parameters.map(({ type }) => type)).flat())].filter( x => !primitives.includes(x))
+  const typesinType = [...new Set(methods.map(({ type }) => type))].filter( x => !primitives.includes(x))
+  const typesInUse = [...new Set([...typesInParams,...typesinType])]
   const x = geetTypes(typesInUse,mainFileName,main)
   return { imports, types:typesInUse, interfaces:x,methods }
 }
@@ -161,7 +162,15 @@ function geetTypes(types, filename, main){
   const sourceFile = main.getSourceFile(filename)
   const coreTypes = convertTypeScriptToCoreTypes(sourceFile.text)
   const refs = []
-  const needed = coreTypes.data.types.filter(({name})=> types.includes(name))
+  const has = coreTypes.data.types.map( ({name}) => name )
+  const needs = []//coreTypes.data.types.map( ({properties}) => properties?.map(({node})=> node.ref) )
+  for (const { properties } of coreTypes.data.types){
+    for (const key of Object.keys(properties)){
+      const ref = properties[key].node.ref
+      if (ref) needs.push(ref)
+    }
+  }
+  const needed = coreTypes.data.types.filter(({name}) => [...types,...needs].includes(name))
   for (const type of needed){
     const {name, properties} = type
     result[name] = type
@@ -169,7 +178,7 @@ function geetTypes(types, filename, main){
     for (const key of Object.keys(properties)) {
       const ref = properties[key].node.ref
       if (ref && !types.includes(ref)){
-        refs.push(ref)
+        if (!has.includes(ref)) refs.push(ref)
       }
     }
   }
@@ -179,13 +188,8 @@ function geetTypes(types, filename, main){
     // TODO there is list of imports ..
     // for now just brute force over all imports
     for (const node of sourceFile.imports){
-      //console.dir({path:sourceFile.path,t:node.text})
-      //(moduleName: string, containingFile: string, options: CompilerOptions, moduleResolutionHost: ModuleResolutionHost)
       // resolve $
       const { resolvedModule } = ts.resolveModuleName(node.text,sourceFile.path,main.getCompilerOptions(),main)
-      //console.dir(resolvedModule)
-      //const vana = resolve(join(dirname(sourceFile.path)),dirname(node.text),basename(node.text,'.mjs')+'.mts')
-      //console.dir({vana})
       const { resolvedFileName } = resolvedModule
       const y = geetTypes(notFound, resolvedFileName, main)
       for (const key of Object.keys(y)){
