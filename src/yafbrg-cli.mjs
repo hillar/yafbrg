@@ -30,9 +30,10 @@ const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
 
 polka()
 /*ROUTES*/
-    .listen(LISTENPORT, (l) => {
-      console.log("> Polka server running on localhost:",LISTENPORT);
-    })
+// https://github.com/braidn/tiny-graphql/blob/master/index.mjs
+.listen(LISTENPORT, (l) => {
+  console.log("> Polka server running on localhost:",LISTENPORT);
+})
   `,
   express:`
 import { default as express } from 'express'
@@ -126,14 +127,23 @@ const framework = (v) => {
   else throw new Error('must be one of:' + FRAMEWORKS.join(','))
 }
 
+const docsgenerator = (v) => {
+  if (!v) return '/usr/local/bin/openapi-generator generate -g markdown -i '
+  const cmd = v.split(' ')[0]
+  //if (fsExistsundExecutable(cmd))
+  // else throw new Error('not found or not executable: '+cmd)
+  return v
+}
+
 const SRCPATH = 'src'
 const ROUTESPATH = 'routes'
+const DOCSPATH = 'docs'
 const TEMPLATESUFFIX = '-server.template.mjs'
 
 
 class YAFBRG_Cli extends Cli{
   constructor(){
-    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production})
+    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production,docsgenerator})
     if (this.workDir !== framework() && this.outDir === `./${framework()}/.build`){
       this.outDir = this.workDir+'/.build'
     }
@@ -149,10 +159,12 @@ class YAFBRG_Cli extends Cli{
     this.srcDir = srcDir
     const routesDir = join(this.workDir,SRCPATH,ROUTESPATH)
     this.routesDir = routesDir
+    this.docsDir = join(this.workDir,DOCSPATH)
     // there is no workir, make one
     if (!fsExistsundWritable(this.workDir)) {
           console.log('bootstraping ...')
       mkdirSync(this.workDir)
+      mkdirSync(this.docsDir)
 
       if (!fsExistsundWritable(srcDir)) mkdirSync(srcDir)
       const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
@@ -358,7 +370,11 @@ class YAFBRG_Cli extends Cli{
     console.log(tmp.sort((a,b)=>a>b?1:-1))
     const openApiFilename = join(this.srcDir,OPENAPIFILENAME)
     writeFileSync(openApiFilename,JSON.stringify(openapi))
-    //console.log(JSON.stringify(openapi,null,4))
+    // generate docs
+    execaCommandSync(`cd "${this.docsDir}" &&  ${this.docsgenerator} ../${SRCPATH}/${OPENAPIFILENAME}`,{shell:true,stdio: 'inherit'})
+    // TODO test openapi with some generator
+    // /usr/local/bin/openapi-generator generate -i ../../src/openapi.json -g python
+    // /usr/local/bin/openapi-generator generate -i ../../src/openapi.json -g markdown
 
 
 
