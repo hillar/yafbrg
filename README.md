@@ -123,7 +123,7 @@ polka()
 
 any other directory in same directory of `routes` is aliased with `$name`.
 
-It allows you to access common components and utility modules without ../../../../ nonsense.
+It allows you to access common  and or utility modules without ../../../../../../ pain. So after moving handler module files around in routes directory there is no need to fix import paths.
 
 ```
 // no need for ../../../../providers/auth.mjs
@@ -132,10 +132,10 @@ import { IUser }  from '$interfaces/user.mjs'
 import { isIP } from '$utils/ip.mjs'
 
 ```
-https://www.typescriptlang.org/tsconfig#paths
-https://www.typescriptlang.org/docs/handbook/module-resolution.html#path-mapping
 
-https://github.com/LeDDGroup/typescript-transform-paths
+it is done with [tsc module resolution  path mapping](https://www.typescriptlang.org/tsconfig#paths) and [trasnform plugin](https://github.com/LeDDGroup/typescript-transform-paths)
+
+
 
 
 ## Endpoints
@@ -152,9 +152,9 @@ export function del(id:number):boolean {...} // `delete` is a reserved word
 ### Rest parameters
 A route can have multiple dynamic parameters, denoted with **[],{},:**,
 for example
-- *src/routes/**[**category**]**/**[**item**]**.mts*
-- *src/routes/**{**category**}**/**{**item**}**.mts*
-- *src/routes/**:**category/**:**item.mts*
+- src/routes/ **[** category **]** / **[** item **]** .mts
+- src/routes/ **{** category **}** / **{** item **}** .mts
+- src/routes/ **:** category/ **:** item.mts
 
 those (category,item) will be passed to handler method as *req.param.x*
 and in openapi docs as *in:path*
@@ -165,7 +165,7 @@ export function get(category:string,item:number):string {...}
 ```
 everything after **?** will be passed as *req.query.y* and in openapi docs as *in:query*
 
-`curl http://localhost/swag/1?color=`
+`curl http://localhost/swag/1?color=green`
 
 ```
 export function get(category:string,item:number,color:string):string {...}
@@ -195,6 +195,13 @@ polka()
 
 
 ---------------------
+
+-------
+
+-------
+
+--------
+
 
 
 ## SSOT
