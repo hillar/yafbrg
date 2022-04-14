@@ -15,6 +15,8 @@ For now, a traditional development setup will be more productive.
 
 ## TLDR;
 
+ yafbrg is a tsc compiler with custom config that works behind the scenes to turn your typescript module files into (polka || koa || fastify || express || ..) api server and openapi docs.
+
 * source **src/routes/users/[id]/index.mts**
 
 ```typescript
@@ -119,7 +121,9 @@ polka()
 
 ## No relative path hell
 
-any other directory in same directory of `routes` is aliased with `$name`
+any other directory in same directory of `routes` is aliased with `$name`.
+
+It allows you to access common components and utility modules without ../../../../ nonsense.
 
 ```
 // no need for ../../../../providers/auth.mjs
@@ -134,6 +138,59 @@ https://www.typescriptlang.org/docs/handbook/module-resolution.html#path-mapping
 https://github.com/LeDDGroup/typescript-transform-paths
 
 
+## Endpoints
+
+Endpoints are typescript modules written in .mts files that export request handler functions corresponding to HTTP methods.
+Their job is to make it possible to read and write data that is only available on the server (for example in a database, or on the filesystem).
+
+Endpoints can handle any HTTP method — not just GET — by exporting the corresponding function:
+```
+export function post(foo:string,bar:number):string {...}
+...
+export function del(id:number):boolean {...} // `delete` is a reserved word
+```
+### Rest parameters
+A route can have multiple dynamic parameters, denoted with **[],{},:**,
+for example
+- *src/routes/**[**category**]**/**[**item**]**.mts*
+- *src/routes/**{**category**}**/**{**item**}**.mts*
+- *src/routes/**:**category/**:**item.mts*
+
+those (category,item) will be passed to handler method as *req.param.x*
+and in openapi docs as *in:path*
+
+```
+export function get(category:string,item:number):string {...}
+
+```
+everything after **?** will be passed as *req.query.y* and in openapi docs as *in:query*
+
+`curl http://localhost/swag/1?color=`
+
+```
+export function get(category:string,item:number,color:string):string {...}
+
+```
+
+if handler function parameter is not primitive type (number,string,..) but **interface**, then it will be passed as *req.body.x* and in openapi docs as *requestBodyproperties*
+
+```
+interface IUser {
+  name: string
+  age: number
+}
+
+export function post(user:IUser,manager:IUser):boolean {...}
+
+```
+
+```
+import { post as postUsers } from './routes/users/index.mjs'
+polka()
+.post('/users/',  (req, res, next) => {
+  res.end( postUsers(req?.body?.user,req?.body?.manager) )
+})
+```
 
 
 
@@ -169,13 +226,7 @@ polka() // You can also use Express
 
 ```
 
-so one can do
 
-```
-
-curl example.com/users/1
-
-```
 
 
 ## list of methods och operations
@@ -208,6 +259,8 @@ export function patch(event:string):number {...}
 export function del(event:string):number {...} // `delete` is a reserved word
 
 ## list of response codes
+
+Any thrown exception containing the **statusCode** and **message** property will be properly populated and send back as a response.
 
 * 501 Not Implemented
 * 500 Internal Server Error
