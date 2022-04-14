@@ -250,8 +250,12 @@ class YAFBRG_Cli extends Cli{
     for (const p of tmppathAliases ){
       this.pathAliases = {...this.pathAliases,...p}
     }
+    const packegeFilename = join(this.workDir,'package.json')
+    this.packageJson = JSON.parse(readFileSync(packegeFilename,'utf-8'))
+
 
     console.log('First run, compiling all with tsc. This may take a while ..')
+    // TODO env production
     /*
     const {schemas,parsed:paths} = await parseAllMTS(routesDir,this.outDir,this.workDir,this.pathAliases)
     this.cached = {schemas, paths}
@@ -266,6 +270,7 @@ class YAFBRG_Cli extends Cli{
       console.error('cant find server template file', templateFilename)
     }
     */
+
   }
 
   async rebuild(filenames){
@@ -376,7 +381,8 @@ class YAFBRG_Cli extends Cli{
     console.log(tmp.sort((a,b)=>a>b?1:-1))
     const {data:openapi} = toOpenApi({ version:1, types })
     // TODO load from package.json
-    openapi.info = {version:'0.0.1',title:this.workDir}
+    const { version, name:title, description, author } = this.packageJson
+    openapi.info = { version, title, description, contact: { name: author } }
     console.log('using routes:')
     tmp = []
     this.cached.routes.forEach(({route, methods})=>{

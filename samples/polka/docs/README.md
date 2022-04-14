@@ -1,4 +1,4 @@
-# Documentation for ./polka
+# Documentation for polka
 
 <a name="documentation-for-api-endpoints"></a>
 ## Documentation for API Endpoints

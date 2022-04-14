@@ -92,6 +92,7 @@ function getImportsundMethods(main, mainFileName ) {
   const methods = []
   const imports = {}
 
+
     const sourceFile = main.getSourceFile(mainFileName)
     if (!sourceFile.isDeclarationFile) {
       ts.forEachChild(sourceFile, (node) => {
