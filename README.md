@@ -217,9 +217,8 @@ it is done with [tsc module resolution  path mapping](https://www.typescriptlang
 ## Endpoints
 
 Endpoints are typescript modules written in .mts files that export request handler functions corresponding to HTTP methods.
-Their job is to make it possible to read and write data that is only available on the server (for example in a database, or on the filesystem).
 
-Endpoints can handle any HTTP method — not just GET — by exporting the corresponding function:
+Endpoints can handle any HTTP method by exporting the corresponding function:
 ```
 export function post(foo:string,bar:number):string {...}
 ...
@@ -239,7 +238,7 @@ and in openapi docs as *in:path*
 export function get(category:string,item:number):string {...}
 
 ```
-everything after **?** will be passed as *req.query.y* and in openapi docs as *in:query*
+everything after **?** in url, will be passed as *req.query.y* and in openapi docs as *in:query*
 
 `curl http://localhost/swag/1?color=green`
 
@@ -268,11 +267,40 @@ polka()
 })
 ```
 
+## OpenAPI
 
+[core-types-ts](https://github.com/grantila/core-types-ts) is used to convert typescript to openapi schemas. Sadly have not (yet) found tool to convert *paths*, so had to write one ;/
+
+To make documentation out of openapi definition file, any tool can be used (openapi-to-md, widdershins, ..)
+For now default in configuration is *openapi-generator*.
+
+## Server code generation
+
+**API routes** *are generated* from filesystem **directory structure**.<br>
+**Call parameters** *are generated* from handler module **function arguments** combined with denoted parts of full filenames.<br>
+**Server response** is type of handler  **function return value**.   
+
+Planned: filenames strarting with **__** are **preHandlers**  and filenames ending with **__** are **postHandlers**
+
+Server code is generated simply replacing parts of template. planned: Supported *frameworks* are:  node:http, polka, koa, fastify, exspress. Customize template as needed.
+
+```
+import { default as polka } from 'polka'
+/*IMPORTS*/
+polka()
+/*ROUTES*/
+.listen(6789)
+```
+
+planned: supported *frameworks* are:  polka,koa,fastify,exspress
 
 ---------------------
 
+works for me™
+
 -------
+
+why? to lazy to fight over SSOT
 
 -------
 
@@ -280,8 +308,6 @@ polka()
 
 
 
-## SSOT
-### Paths and (Parameters och Request Body) and Responses
 
 * [method](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) aka  [operation](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#operationObject)
 * [path](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#pathsObject)
@@ -289,90 +315,6 @@ polka()
 * Output Models :: [Response](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#responseObject)s
 
 
-For example, function `function get(id:number):string` in */users/[id].mts* is  described as:
-
-* method: `GET`
-* path: `/users`
-* input (in path): `{ name:id, type:number }`
-* output: `{ type:string }`
-
-and from TypeScript source is compiled to
-
-```javascript
-import { get as getUserId } from './users/[id].mjs'
-
-polka() // You can also use Express
-
-  .get('/users/:id', (req, res) => {
-    res.end( getUserId(req.params.id) );
-  })
-
-```
-
-
-
-
-## list of methods och operations
-
-> GET
->> requests a representation of the specified resource. Requests using GET should only retrieve data.
-
-> HEAD
->> asks for a response identical to a GET request, but without the response body.
-
-> POST
->> submits an entity to the specified resource, often causing a change in state or side effects on the server.
-
-> PUT
->> replaces all current representations of the target resource with the request payload.
-
-> DELETE
->> deletes the specified resource.
-
-#### POST, PUT, PATCH, DELETE
-
-Endpoints can handle any HTTP method by exporting the corresponding function:
-
-export function post(event:string):number {...}
-
-export function put(event:string):number {...}
-
-export function patch(event:string):number {...}
-
-export function del(event:string):number {...} // `delete` is a reserved word
-
-## list of response codes
-
-Any thrown exception containing the **statusCode** and **message** property will be properly populated and send back as a response.
-
-* 501 Not Implemented
-* 500 Internal Server Error
-
-* 404 Not Found
-
-
-* 422 Unprocessable Entity
-* 415 Unsupported Media Type
-
-
-* 503 Service Unavailable
-* 429 Too Many Requests
-
-
-
-
-
-
-### source code is single source of truth (SSOT) for API documentation
-
-
-> ~~To document the API, a technical writer examines the code created by the API developers and then manually creates the API documentation.~~
-
->> SSOT is the API's source code.
-
-> ~~If you will spend time writing definitions and then spend time writing code to ensure these definitions are maintained during runtime, why have them in the first place?~~
-
->> definitions make up documentation
 
 -------
 ```
