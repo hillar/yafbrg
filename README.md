@@ -13,10 +13,9 @@ This is highly experimental, highly incomplete, and completely undocumented.
 
 For now, a traditional development setup will be more productive.
 
+## TLDR;
 
 * source **src/routes/users/[id]/index.mts**
-
-
 
 ```typescript
 import { IUser } from '$interfaces/user.mjs'
@@ -118,6 +117,22 @@ polka()
 
 ```
 
+## No relative path hell
+
+any other directory in same directory of `routes` is aliased with `$name`
+
+```
+// no need for ../../../../providers/auth.mjs
+import { checkUser }  from '$providers/auth.mjs'
+import { IUser }  from '$interfaces/user.mjs'
+import { isIP } from '$utils/ip.mjs'
+
+```
+https://www.typescriptlang.org/tsconfig#paths
+https://www.typescriptlang.org/docs/handbook/module-resolution.html#path-mapping
+
+https://github.com/LeDDGroup/typescript-transform-paths
+
 
 
 
@@ -208,16 +223,8 @@ export function del(event:string):number {...} // `delete` is a reserved word
 * 429 Too Many Requests
 
 
-## No relative path hell
 
-any other directory in same directory of `routes` is aliased with `$name`
 
-```
-// no need for ../../../../providers/auth.mjs
-import { checkUser }  from '$providers/auth.mjs'
-import { IUser }  from '$interfaces/user.mjs'
-
-```
 
 
 ### source code is single source of truth (SSOT) for API documentation

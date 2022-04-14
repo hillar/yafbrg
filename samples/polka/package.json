@@ -1,6 +1,6 @@
 {
   "name": "polka",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "simple polka sample",
   "main": "index.js",
   "directories": {
@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "author email or phone or ..",
+  "author": "email or phone or ..",
   "license": "ISC",
   "devDependencies": {
     "polka": "^0.5.2"

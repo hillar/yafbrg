@@ -1,5 +1,5 @@
 import { Cli } from './utils/cli.mjs'
-import { parseAllMTS, toPolka, parseRoute } from './yafbrg.mjs'
+import { parseAllMTS, toPolka, parseRoute, findAllMTS } from './yafbrg.mjs'
 import { compileundparse, toOpenApi, primitives } from './utils/parseMTS.mjs'
 import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, constants } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
@@ -250,33 +250,24 @@ class YAFBRG_Cli extends Cli{
     for (const p of tmppathAliases ){
       this.pathAliases = {...this.pathAliases,...p}
     }
+    // read package.json
     const packegeFilename = join(this.workDir,'package.json')
     this.packageJson = JSON.parse(readFileSync(packegeFilename,'utf-8'))
-
-
-    console.log('First run, compiling all with tsc. This may take a while ..')
-    // TODO env production
-    /*
-    const {schemas,parsed:paths} = await parseAllMTS(routesDir,this.outDir,this.workDir,this.pathAliases)
-    this.cached = {schemas, paths}
-    console.dir(paths)
-    const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
-    if (fsExistsundWritable(templateFilename)){
-      const templateServer = readFileSync(templateFilename,'utf-8')
-      const serverSource = toPolka(templateServer,paths,join(this.outDir,SRCPATH),this.port)
-      const serverFilename = join(this.outDir,SRCPATH,this.framework+'-server.mjs')
-      writeFileSync(serverFilename,serverSource)
+    // build prod or start watching changes ..
+    if (this.production){
+      const allRouteMTS = (await findAllMTS(this.routesDir)).map(x=> {return {filename:x,event:'add'}})
+      const exitCode = (await this.rebuild(allRouteMTS)) ? 0 : 1
+      //TODO print some pretti report ..
+      process.exit(exitCode)
     } else {
-      console.error('cant find server template file', templateFilename)
+      console.log('First run, compiling all with tsc. This may take a while ..')
     }
-    */
-
   }
 
-  async rebuild(filenames){
+  async rebuild(fileEvents){
     const updates = []
     const failed = []
-    for (const {event,filename} of filenames.filter(({event})=>event!=='unlink')) {
+    for (const { filename } of fileEvents.filter(({event})=>event!=='unlink')) {
       if (!filename.endsWith('.mts')) continue
       if (!filename.startsWith(this.routesDir)) continue
       const parsed = await compileundparse(filename,this.outDir,this.workDir,this.pathAliases)
@@ -290,7 +281,7 @@ class YAFBRG_Cli extends Cli{
       console.error('***  ***')
       return false
     }
-    return this.cacheUpdate(updates,filenames.filter(({event})=>event==='unlink').map(({filename})=>filename))
+    return this.cacheUpdate(updates,fileEvents.filter(({event})=>event==='unlink').map(({filename})=>filename))
   }
 
   async cacheUpdate(updates,deletes=[]){
@@ -518,16 +509,6 @@ async function restart(path){
     } else {
       // rebuild failed, keep paths
     }
-    //paths = []
-    /*
-    console.log('restarting ..',serverFilename)
-    if (subprocessServer?.kill && !subprocessServer.killed) await subprocessServer.kill('SIGTERM', {
-      forceKillAfterTimeout: 1
-    });
-    subprocessServer = execa(`node`,[`${serverFilename}`] )
-    subprocessServer.stdout.pipe(process.stdout)
-    subprocessServer.stderr.pipe(process.stderr)
-    */
     running = false
   }, 500)
 }

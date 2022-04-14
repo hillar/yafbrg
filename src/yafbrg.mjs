@@ -114,7 +114,7 @@ export function parseRoute(orig, loose) {
 
 
 
-async function findAllMTS(dirName){
+export async function findAllMTS(dirName){
   let result = []
   const maybeRoutes = readdirSync(dirName,{withFileTypes:true})
   for (const maybeRoute of maybeRoutes.filter(f=>f.isFile()&&f.name.endsWith('.mts')&&!f.name.endsWith('.d.mts'))) {
