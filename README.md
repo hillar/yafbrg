@@ -31,29 +31,77 @@ export async function get(id:number):IUser {
 }
 
 ```
+
 * generated **src/polka-server.mjs**
+
 ```javascript
 import { polka } from 'polka'
 import { get as getUserId } from './routes/users/[id]/index.mjs'
 
 polka()
 .get('/users/:id', (req, res) => {
-  res.setHeader('conten-type','application/json; charset=UTF-8')
+
   res.end( getUserId(req.params.id) );
+
 })
 
 
 ```
-* generated **src/openapi.json**
+
+<details>
+
+<summary>generated src/openapi.json </summary>
 
 ```json
 {
   "openapi": "3.0.0",
   "info": {
-    "version": "0.0.1",
-    "title": "./polka"
+    "version": "0.0.0",
+    "title": "polka",
+    "description": "simple polka sample",
+    "contact": {
+      "name": "email or phone or .."
+    }
   },
   "paths": {
+    "/users/": {
+      "post": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IResult"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user": {
+                    "$ref": "#/components/schemas/IUser",
+                    "required": true
+                  },
+                  "manager": {
+                    "$ref": "#/components/schemas/IUser",
+                    "required": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/users/{id}/": {
       "get": {
         "parameters": [
@@ -78,12 +126,26 @@ polka()
             }
           }
         },
-        "summary": "returns user by id"
+        "summary": "\nreturns user by id"
       }
     }
   },
   "components": {
     "schemas": {
+      "IResult": {
+        "properties": {
+          "ok": {
+            "title": "IResult.ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "additionalProperties": false,
+        "title": "IResult",
+        "type": "object"
+      },
       "IUser": {
         "properties": {
           "id": {
@@ -99,18 +161,31 @@ polka()
             "type": "string"
           },
           "ou": {
-            "title": "IUser.ou",
-            "type": "string"
+            "$ref": "#/components/schemas/IOrgUnit",
+            "title": "IUser.ou"
           }
         },
         "required": [
           "id",
           "firstname",
-          "lastname",
-          "ou"
+          "lastname"
         ],
         "additionalProperties": false,
         "title": "IUser",
+        "type": "object"
+      },
+      "IOrgUnit": {
+        "properties": {
+          "name": {
+            "title": "IOrgUnit.name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "title": "IOrgUnit",
         "type": "object"
       }
     }
@@ -118,6 +193,7 @@ polka()
 }
 
 ```
+</details>
 
 ## No relative path hell
 
