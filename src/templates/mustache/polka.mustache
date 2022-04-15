@@ -1,0 +1,15 @@
+import { default as polka } from 'polka'
+{{#imports}}
+import { {{name}} as {{alias}} } from '{{path}}'
+{{/imports}}
+
+polka()
+    {{#methods}}
+    .{{method}}({{route}},  (req, res, next) => {
+      res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
+      res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
+    })
+    {{/methods}}
+.listen({{port}}, () => {
+  console.log("> Polka server running on localhost:",{{port}});
+})
