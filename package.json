@@ -1,8 +1,9 @@
 {
   "name": "yafbrg",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "filesystem based routes und API docs generation",
   "main": "src/yafbrg-cli.js",
+  "bin": {"yafbrg":"src/yafbrg-cli.js"},
   "repository": "https://github.com/hillar/yafbrg.git",
   "author": "hillar <hillar@aarelaid.net>",
   "license": "MIT",
