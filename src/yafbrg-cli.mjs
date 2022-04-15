@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { Cli } from './utils/cli.mjs'
 import { parseAllMTS, toPolka, parseRoute, findAllMTS } from './yafbrg.mjs'
 import { compileundparse, toOpenApi, primitives } from './utils/parseMTS.mjs'
@@ -234,8 +236,8 @@ class YAFBRG_Cli extends Cli{
           writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyinterface'])
         }
       }
-      // TODO dev pacgages like body-parser
-      execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.framework}`,{shell:true,stdio: 'inherit'})
+      // TODO package.json template
+      execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.framework}@next`,{shell:true,stdio: 'inherit'})
       //.stdout.pipe(process.stdout)
       //.stderr.pipe(process.stderr)
 
