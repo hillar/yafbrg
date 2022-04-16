@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { render, routes2data, getDefaultTemplate } from './utils/mustache.mjs'
 import { Cli } from './utils/cli.mjs'
 import { parseAllMTS, toPolka, parseRoute, findAllMTS } from './yafbrg.mjs'
 import { compileundparse, toOpenApi, primitives } from './utils/parseMTS.mjs'
@@ -85,7 +86,7 @@ try {
   dummyroute:`
   import {dummy} from '$providers/dummy.mjs'
   import {IDummy} from '$interfaces/foo/bar.mjs'
-  export function get():string{
+  export function get(backend:string):string{
     return ''
   }
   `,
@@ -157,7 +158,7 @@ const docsgenerator = (v) => {
 const SRCPATH = 'src'
 const ROUTESPATH = 'routes'
 const DOCSPATH = 'docs'
-const TEMPLATESUFFIX = '-server.template.mjs'
+const TEMPLATESUFFIX = '-server.mustache'//.template.mjs'
 
 
 class YAFBRG_Cli extends Cli{
@@ -184,10 +185,9 @@ class YAFBRG_Cli extends Cli{
           console.log('bootstraping ...')
       mkdirSync(this.workDir)
       mkdirSync(this.docsDir)
-
       if (!fsExistsundWritable(srcDir)) mkdirSync(srcDir)
       const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
-      if (!fsExistsundWritable(templateFilename)) writeFileSync(templateFilename,TEMPLATES[this.framework])
+      if (!fsExistsundWritable(templateFilename)) writeFileSync(templateFilename,getDefaultTemplate([this.framework]))
 
       if (!fsExistsundWritable(routesDir)) mkdirSync(routesDir)
       const defaultroutepreffix = 'api/v1'
@@ -253,8 +253,8 @@ class YAFBRG_Cli extends Cli{
       this.pathAliases = {...this.pathAliases,...p}
     }
     // read package.json
-    const packegeFilename = join(this.workDir,'package.json')
-    this.packageJson = JSON.parse(readFileSync(packegeFilename,'utf-8'))
+    const packageFilename = join(this.workDir,'package.json')
+    this.packageJson = JSON.parse(readFileSync(packageFilename,'utf-8'))
     // build prod or start watching changes ..
     if (this.production){
       const allRouteMTS = (await findAllMTS(this.routesDir)).map(x=> {return {filename:x,event:'add'}})
@@ -448,8 +448,10 @@ class YAFBRG_Cli extends Cli{
     // make server
     const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)){
-      const templateServer = readFileSync(templateFilename,'utf-8')
-      const serverSource = toPolka(templateServer,this.cached.routes,this.srcDir,this.port)
+      //const templateServer = readFileSync(templateFilename,'utf-8')
+      //console.dir(this.cached.routes)
+      const serverSource = render(templateFilename,routes2data(this.cached.routes,this.port,this.srcDir))
+      //const serverSource = toPolka(templateServer,this.cached.routes,this.srcDir,this.port)
       const serverFilename = join(this.outDir,SRCPATH,this.framework+'-server.mjs')
       writeFileSync(serverFilename,serverSource)
     } else {

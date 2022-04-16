@@ -2,9 +2,6 @@ import { default as mustache } from 'mustache'
 import { readFileSync } from 'node:fs'
 
 
-
-
-
 function getReverse(mustacheTokens){
   const namesundsections = mustacheTokens.filter(x=>x[0]!=='text')
   const tmp = {}
@@ -21,7 +18,7 @@ function getReverse(mustacheTokens){
   return tmp
 }
 
-function reverse(templateFilename){
+export function reverse(templateFilename){
   const template = readFileSync(templateFilename,'utf-8')
   const mustacheTokens = mustache.parse(template)
   console.dir(mustacheTokens)
@@ -34,32 +31,40 @@ console.log(JSON.stringify(x,null,4))
 
 const data = {
     "imports": [
-        {
-            "name": "a",
-            "alias": "",
-            "path": ""
-        },
-        {
-            "name": "b",
-            "alias": "",
-            "path": ""
-        }
+      {
+          "exports": [
+              {
+                  "named": "post",
+                  "alias": "getPoistid"
+              }
+          ],
+          "specifier": "a/b/c"
+      }
     ],
     "methods": [
         {
             "method": "aa",
             "route": "a/b",
             "contentype": "text/plain",
-            "alias": "",
+            "alias": "b",
             "params": [
-                ""
+                'id','n'
+            ]
+        },
+        {
+            "method": "aa",
+            "route": "a/b",
+            "contentype": "text/plain",
+            "alias": "b",
+            "params": [
+                'id','n'
             ]
         }
     ],
-    "port": ""
+    "port": "1234"
 }
 
-function render(templateFilename,data){
+export function render(templateFilename,data){
   const template = readFileSync(templateFilename,'utf-8')
   mustache.escape = function(text) {return text;};
   const rendered = mustache.render(template,data)

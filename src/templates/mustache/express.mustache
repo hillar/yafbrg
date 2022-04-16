@@ -1,10 +1,10 @@
-import { default as polka } from 'polka'
+import { default as express } from 'express'
 {{#imports}}
 import { {{#exports}} {{named}} as {{alias}} {{/exports}} } from '{{specifier}}'
 {{/imports}}
 
-polka()
-    
+
+express()
     {{#methods}}
     .{{method}}('{{route}}',  (req, res, next) => {
       res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
