@@ -2,13 +2,12 @@
 
 import { render, routes2data, getDefaultTemplate } from './utils/mustache.mjs'
 import { Cli } from './utils/cli.mjs'
-import { parseAllMTS, toPolka, parseRoute, findAllMTS } from './yafbrg.mjs'
+import { parseAllMTS, parseRoute, findAllMTS } from './yafbrg.mjs'
 import { compileundparse, toOpenApi, primitives } from './utils/parseMTS.mjs'
-import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, constants } from 'node:fs'
+import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, constants, readlinkSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { default as chokidar } from 'chokidar'
 import { execa, execaCommandSync } from 'execa'
-
 
 
 function fsExistsundWritable(name){
@@ -243,8 +242,9 @@ class YAFBRG_Cli extends Cli{
 
     }
     // paths aliases
+    // TODO check is symbolic link directory
     const tmppathAliases = readdirSync(join(this.workDir,SRCPATH),{withFileTypes:true})
-    .filter(f=>f.isDirectory())
+    .filter(f=>f.isDirectory()||f.isSymbolicLink())
     .map(f=>f.name)
     .filter(x=>x!==ROUTESPATH)
     .map(x=>{const tmp= {}; tmp[`\$${x}/*`]=[`./${SRCPATH}/${x}/*`]; return tmp})
