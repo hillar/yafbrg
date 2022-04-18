@@ -24,7 +24,7 @@ polka()
     {{#methods}}
     .{{method}}('{{route}}',  (req, res, next) => {
       const { params, query, body } = req
-      res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
+      res.setHeader('conten-type','{{contenttype}}; charset=UTF-8')
       res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
     })
     {{/methods}}

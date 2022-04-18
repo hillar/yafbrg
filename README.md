@@ -293,6 +293,9 @@ Planned: filenames strarting with **__** are **preHandlers**  and filenames endi
 
 Server code is generated simply replacing parts of template with good old **mustache**.  Theoretically any framework based on **node:http** like *polka, koa, fastify, exspress* can be used. Expected is that denoting of route parameters in the path with **:** is supported, and http methods are handled with handler functions.
 
+
+mustache tempalte
+
 ```
 import { default as polka } from 'polka'
 {{#imports}}
@@ -303,7 +306,7 @@ polka()
     {{#methods}}
     .{{method}}('{{route}}',  (req, res, next) => {
       const { params, query, body } = req
-      res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
+      res.setHeader('conten-type','{{contenttype}}; charset=UTF-8')
       res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
     })
     {{/methods}}
@@ -312,6 +315,55 @@ polka()
 })
 
 ```
+data for render function
+
+```
+{
+    "port": 6789,
+    "imports": [
+        {
+            "specifier": "./routes/users/[id]/index.mjs",
+            "exports": [
+                {
+                    "named": "get",
+                    "alias": "getUsersId"
+                }
+            ]
+        }
+    ],
+    "methods": [
+        {
+            "method": "get",
+            "route": "/users/:id/",
+            "params": [
+                "params?.id"
+            ],
+            "async": "",
+            "alias": "getUsersId",
+            "contenttype": "application/json"
+        }
+    ]
+}
+```
+
+render result
+
+```
+import { default as polka } from 'polka'
+import {  get as getUsersId  } from './routes/users/[id]/index.mjs'
+
+polka()
+    .get('/users/:id/',  (req, res, next) => {
+      const { params, query, body } = req
+      res.setHeader('conten-type','application/json; charset=UTF-8')
+      res.end(JSON.stringify( getUsersId(params?.id,)))
+    })
+.listen(6789, () => {
+  console.log("> Polka server running on localhost:",6789);
+})
+
+```
+
 
 
 
