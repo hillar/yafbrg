@@ -60,6 +60,7 @@ const POLKA = 'polka'
 const EXPRESS = 'express'
 const FASTIFY = 'fastify'
 const FRAMEWORKS = [POLKA,EXPRESS,FASTIFY]
+const PACKAGEMANAGERS = ['npm','pnpm','yarn']
 const OPENAPIFILENAME = 'openapi.json'
 
 // TODO well known
@@ -96,6 +97,12 @@ const skeleton = (v) => {
   else throw new Error('can not find skeleton: ' + v)
 }
 
+const packagemanager = (v) => {
+  if (!v) return PACKAGEMANAGERS[0]
+  if (PACKAGEMANAGERS.includes(v)) return v
+  else throw new Error('must be one of:' + PACKAGEMANAGERS.join(','))
+}
+
 const docsgenerator = (v) => {
   if (!v) return '/usr/local/bin/openapi-generator generate -g markdown -i '
   const cmd = v.split(' ')[0]
@@ -115,7 +122,7 @@ const TEMPLATESUFFIX = '-server.mustache'//.template.mjs'
 
 class YAFBRG_Cli extends Cli{
   constructor(){
-    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production,docsgenerator,skeleton})
+    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production,docsgenerator,packagemanager,skeleton})
     if (this.workDir !== framework() && this.outDir === `./${framework()}/.build`){
       this.outDir = this.workDir+'/.build'
     }
@@ -151,7 +158,7 @@ class YAFBRG_Cli extends Cli{
         console.log('using skeleton',this.skeleton)
         // just copy all
         await copy(resolve(this.skeleton),resolve(this.workDir))
-        execaCommandSync(`cd "${this.workDir}" && pwd && yarn install`,{shell:true,stdio: 'inherit'})
+        execaCommandSync(`cd "${this.workDir}" && ${this.packagemanager} install`,{shell:true,stdio: 'inherit'})
 
         /*
         const skeletonFilename = join(this.skeleton,this.framework+TEMPLATESUFFIX)
@@ -343,15 +350,16 @@ class YAFBRG_Cli extends Cli{
 
     const types =  []
 
-    console.log('using interfaces:')
+    //console.log('using interfaces:')
     let tmp = []
     this.cached.schemas.forEach((v)=>{
       tmp.push(v.name)
       types.push(v)
     })
-    console.log(tmp.sort((a,b)=>a>b?1:-1))
+    //console.log(tmp.sort((a,b)=>a>b?1:-1))
+
     const {data:openapi} = toOpenApi({ version:1, types })
-    // TODO load from package.json
+    // load from package.json
     const { version, name:title, description, author } = this.packageJson
     openapi.info = { version, title, description, contact: { name: author } }
     console.log('using routes:')
@@ -365,7 +373,6 @@ class YAFBRG_Cli extends Cli{
         if (mn==="del") mn = 'delete'
         openapi.paths[route.curlified][mn] = {parameters:[],responses:{"200":{"description":"",content:{}}}}
         openapi.paths[route.curlified][mn].summary = method?.jsDoc?.join(' ') || ''
-        //openapi.paths[route.curlified][mn].parameters.push(...)
         const requestBodyproperties = {}
         let requestBodyRequired = false
         for (const {name,type,required} of method.parameters){
@@ -381,31 +388,11 @@ class YAFBRG_Cli extends Cli{
             requestBodyproperties[name] ={"$ref":`#/components/schemas/${type}`,required}
             if (required) requestBodyRequired = true
           }
-
-          //openapi.paths[route.curlified][mn].parameters.push(tmp)
         }
         if (Object.keys(requestBodyproperties).length) {
           openapi.paths[route.curlified][mn].requestBody = {required:requestBodyRequired}
           openapi.paths[route.curlified][mn].requestBody.content = {"application/json":{schema:{type: "object",properties:requestBodyproperties}}}
         }
-        /*
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "kala": {
-                    "$ref": "#/components/schemas/IDummy",
-                    "title": "IxDummy.backend2"
-                  }
-                },
-              }
-            }
-          }
-        }
-        */
         if (primitives.includes(method.type)){
           openapi.paths[route.curlified][mn].responses['200'].content["text/plain"] = {schema:{type:method.type}}
         } else {
@@ -422,7 +409,6 @@ class YAFBRG_Cli extends Cli{
     } catch (e) {
       return false
     }
-
     // make server
     const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)){
@@ -438,19 +424,14 @@ class YAFBRG_Cli extends Cli{
     }
     return true
   }
-
 }
 
 
 const cli = new YAFBRG_Cli()
 await cli.firstrun()
 
-
 const serverFilename = join('./',cli.outDir,SRCPATH,cli.framework+'-server.mjs')
-// console.log('starting ..',serverFilename)
 let subprocessServer
-
-
 let paths = []
 let timeoutId
 let running
@@ -475,8 +456,6 @@ async function restart(path){
     if (!paths.length) return
     running = true
     timeoutId = null
-    //console.dir({paths})
-    //console.dir({changed:paths.map(({filename})=>filename)})
     if (subprocessServer?.kill && !subprocessServer.killed) await subprocessServer.kill('SIGTERM', {
       forceKillAfterTimeout: 1
     });
@@ -495,7 +474,6 @@ async function restart(path){
   }, 500)
 }
 
-
 setTimeout(async () => {
   chokidar.watch(join(cli.workDir,SRCPATH),{ignored:OPENAPIFILENAME})
   .on('abort', abort => log(`Watcher abort: ${abort}`))
@@ -505,21 +483,3 @@ setTimeout(async () => {
   .on('unlink', async (path) => {await restart({filename:path,event:'unlink'})})
   //await subprocessServer
 },1000)
-
-
-
-/*
-change polka/src/routes/api/v1/status/version.mts
-
-// mv polka/src/routes/api/v1/health -> polka/src/routes/api/v1/status/health
-unlink polka/src/routes/api/v1/health/index.mts
-unlink polka/src/routes/api/v1/health/upstreams/[backend].mts
-unlinkDir polka/src/routes/api/v1/health/upstreams
-unlinkDir polka/src/routes/api/v1/health
-addDir polka/src/routes/api/v1/status/health
-add polka/src/routes/api/v1/status/health/index.mts
-addDir polka/src/routes/api/v1/status/health/upstreams
-add polka/src/routes/api/v1/status/health/upstreams/[backend].mts
-
-
-*/

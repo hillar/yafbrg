@@ -70,7 +70,6 @@ export function reverse(templateFilename){
 }
 
 export function render(templateFilename,data){
-  console.log(JSON.stringify(data,null,4))
   const template = readFileSync(templateFilename,'utf-8')
   mustache.escape = text => text
   const rendered = mustache.render(template,data)
