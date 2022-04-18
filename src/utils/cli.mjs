@@ -1,4 +1,7 @@
 import { Settable } from './settable.mjs'
+import { homedir } from 'node:os'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 export class Cli extends Settable {
   #params
@@ -21,6 +24,33 @@ export class Cli extends Settable {
       this.help()
       process.exit(0)
     }
+    // load rc first if exists
+    let rcRaw
+    let createRCFileinHomedir
+    const rcVals = {}
+    let rcFile = `.${this.prototypeof.toLowerCase()}rc`
+    try {
+      rcRaw = readFileSync(rcFile,'utf-8')
+    } catch (error) {
+      try {
+        rcFile = join(homedir(),rcFile)
+        rcRaw = readFileSync(rcFile,'utf-8')
+      } catch (error) {
+        createRCFileinHomedir = true
+      }
+    }
+    if (rcRaw) {
+      for (const line of rcRaw.split('\n')){
+        const [settable,value] = line.split('=')
+        try {
+          this[settable] = value
+        }  catch (error) {
+          let message = error.toString()
+          if (!message.includes(error.settable)) message = message.replace('Error:', `Error: ${error.settable.toUpperCase()} `)
+          console.error(rcFile, message)
+        }
+      }
+    }
     // look for command line options
     // if not set, look for ENV
     for (const settable of this.settings){
@@ -41,6 +71,18 @@ export class Cli extends Settable {
         if (!message.includes(error.settable)) message = message.replace('Error:', `Error: ${error.settable.toUpperCase()} `)
         console.error(message)
         process.exit(1)
+      }
+    }
+    if (createRCFileinHomedir) {
+      let rcStr = ''
+      for (const settable of this.settings){
+        rcStr += `${settable}=${this[settable]}\n`
+      }
+      try {
+        writeFileSync(join(homedir(),rcFile),rcStr)
+        if (process.stdout.isTTY) console.log('created',join(homedir(),rcFile))
+      } catch (error) {
+        //noop
       }
     }
     /*
