@@ -19,6 +19,7 @@
     "mustache": "^4.2.0",
     "nodemon": "^2.0.15",
     "nodewatch": "^0.3.1",
+    "recursive-copy": "^2.0.14",
     "reverse-mustache": "^1.9.0",
     "typescript": "^4.7.0-dev.20220330",
     "typescript-transform-paths": "^3.3.1"

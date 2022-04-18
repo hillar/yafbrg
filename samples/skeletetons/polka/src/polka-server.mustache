@@ -1,0 +1,33 @@
+// sample skeleton for polka server
+// EDIT THIS FILE
+
+import { default as polka } from 'polka'
+{{#imports}}
+import { {{#exports}} {{named}} as {{alias}} {{/exports}} } from '{{specifier}}'
+{{/imports}}
+
+polka()
+    .use((req,res,next)=>{
+        const body = []
+        req.on('data', chunk => body.push(chunk))
+        req.on('end', () => {
+          try {
+            req.body = JSON.parse(Buffer.concat(body).toString())
+          } catch (error) {
+            error.statusCode = 415
+            throw error
+          } finally {
+            next()
+          }
+        })
+    })
+    {{#methods}}
+    .{{method}}('{{route}}',  (req, res, next) => {
+      const { params, query, body } = req
+      res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
+      res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
+    })
+    {{/methods}}
+.listen({{port}}, () => {
+  console.log("> Polka server running on localhost:",{{port}});
+})

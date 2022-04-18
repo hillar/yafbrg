@@ -8,6 +8,7 @@ import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, consta
 import { join, dirname, resolve } from 'node:path'
 import { default as chokidar } from 'chokidar'
 import { execa, execaCommandSync } from 'execa'
+import copy from 'recursive-copy';
 
 
 function fsExistsundWritable(name){
@@ -24,64 +25,7 @@ function fsExistsundWritable(name){
 const ALLOWEDMETHODS = ['HEAD','GET','POST','PUT','PATCH','DEL']
 
 const TEMPLATES = {
-  polka: `
-import { default as polka } from 'polka'
-/*IMPORTS*/
 
-const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
-
-polka()
-.use( (req,res,next) => {
-  const body = []
-  req.on('data', async (chunk) => { body.push(chunk) })
-  req.on('end',async () => {
-    try {
-      req.body = JSON.parse(Buffer.concat(body).toString())
-      next()
-    } catch (error) {
-      res.statusCode = 415
-      res.end('not json')
-    }
-  })
-  req.on('error', (error) => {
-    res.statusCode = 500
-    res.end()
-  })
-})
-/*ROUTES*/
-// https://github.com/braidn/tiny-graphql/blob/master/index.mjs
-.listen(LISTENPORT, (l) => {
-  console.log("> Polka server running on localhost:",LISTENPORT);
-})
-  `,
-  express:`
-import { default as express } from 'express'
-/*IMPORTS*/
-
-const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
-
-express()
-/*ROUTES*/
-.listen(LISTENPORT, (l) => {
-  console.log("> Express server running on localhost:",LISTENPORT);
-})
-  `,
-  fastify: `
-import { default as fastify } from 'fastify';
-/*IMPORTS*/
-
-const LISTENPORT= process.env.PORT || /*DEFAULTPORT*/
-
-fastify.route(/*ROUTES*/)
-
-try {
-  await fastify.listen(3000)
-} catch (err) {
-  fastify.log.error(err)
-  process.exit(1)
-}
-
-  `,
   dummyroute:`
   import {dummy} from '$providers/dummy.mjs'
   import {IDummy} from '$interfaces/foo/bar.mjs'
@@ -146,6 +90,12 @@ const framework = (v) => {
   else throw new Error('must be one of:' + FRAMEWORKS.join(','))
 }
 
+const skeleton = (v) => {
+  if (!v) return ''
+  if (fsExistsundWritable(v)) return v
+  else throw new Error('can not find skeleton: ' + v)
+}
+
 const docsgenerator = (v) => {
   if (!v) return '/usr/local/bin/openapi-generator generate -g markdown -i '
   const cmd = v.split(' ')[0]
@@ -160,14 +110,21 @@ const DOCSPATH = 'docs'
 const TEMPLATESUFFIX = '-server.mustache'//.template.mjs'
 
 
+
+
+
 class YAFBRG_Cli extends Cli{
   constructor(){
-    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production,docsgenerator})
+    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production,docsgenerator,skeleton})
     if (this.workDir !== framework() && this.outDir === `./${framework()}/.build`){
       this.outDir = this.workDir+'/.build'
     }
     if (process.stdout.isTTY) {
       console.log(this.prototypeof.toLowerCase(),'starting with:',this.defaults)
+    }
+    if (resolve(this.skeleton) === resolve(this.workDir)) {
+      console.error('skeleton can not be same as workdir: ', this.skeleton)
+      process.exit(1)
     }
     this.cached = {routes:new Map(), schemas:new Map()}
   }
@@ -181,64 +138,85 @@ class YAFBRG_Cli extends Cli{
     this.docsDir = join(this.workDir,DOCSPATH)
     // there is no workir, make one
     if (!fsExistsundWritable(this.workDir)) {
-          console.log('bootstraping ...')
+      console.log('bootstraping ...')
       mkdirSync(this.workDir)
       mkdirSync(this.docsDir)
+      mkdirSync(this.srcDir)
+      mkdirSync(this.routesDir)
       if (!fsExistsundWritable(srcDir)) mkdirSync(srcDir)
-      const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
-      if (!fsExistsundWritable(templateFilename)) writeFileSync(templateFilename,getDefaultTemplate([this.framework]))
 
-      if (!fsExistsundWritable(routesDir)) mkdirSync(routesDir)
-      const defaultroutepreffix = 'api/v1'
-      const defaultroutes = [
-      'status/index.mts',
-      'status/version.mts',
-      'status/upstreams.mts',
-      'status/upstreams/[backend].mts',
-      'health/index.mts',
-      'health/upstreams/[backend].mts',
-      ]
-      for (const defaultroute of defaultroutes){
-        const routefile = join(routesDir,defaultroutepreffix,defaultroute)
-        console.dir(routefile)
-        if (!fsExistsundWritable(routefile)) {
-          const dname = dirname(routefile)
-          if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
-          writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyroute'])
+      const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
+
+      if (this.skeleton) {
+        console.log('using skeleton',this.skeleton)
+        // just copy all
+        await copy(resolve(this.skeleton),resolve(this.workDir))
+        execaCommandSync(`cd "${this.workDir}" && pwd && yarn install`,{shell:true,stdio: 'inherit'})
+
+        /*
+        const skeletonFilename = join(this.skeleton,this.framework+TEMPLATESUFFIX)
+        try {
+          let template = readFileSync(skeletonFilename,'utf-8')
+          writeFileSync(templateFilename,template)
+
+        } catch (error) {
+          console.error(skeletonFilename)
+          console.error(error)
         }
-      }
-      const defaultproviderspreffix = 'providers'
-      const defaultproviders = [
-      'dummy.mts',
-      'foo/bar.mts',
-      ]
-      for (const defaultprovider of defaultproviders){
-        const routefile = join(srcDir,defaultproviderspreffix,defaultprovider)
-        console.dir(routefile)
-        if (!fsExistsundWritable(routefile)) {
-          const dname = dirname(routefile)
-          if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
-          writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyprovider'])
+        */
+      } else { // no skeleteon, just fill dirs with hardcoded stuff ...
+        console.log('using hardcoded sample')
+        let template = getDefaultTemplate([this.framework])
+        if (!fsExistsundWritable(templateFilename)) writeFileSync(templateFilename,template)
+        const defaultroutepreffix = 'api/v1'
+        const defaultroutes = [
+        'status/index.mts',
+        'status/version.mts',
+        'status/upstreams.mts',
+        'status/upstreams/[backend].mts',
+        'health/index.mts',
+        'health/upstreams/[backend].mts',
+        ]
+        for (const defaultroute of defaultroutes){
+          const routefile = join(routesDir,defaultroutepreffix,defaultroute)
+          if (!fsExistsundWritable(routefile)) {
+            const dname = dirname(routefile)
+            if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
+            writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyroute'])
+          }
         }
-      }
-      const defaultinterfacespreffix = 'interfaces'
-      const defaultinterfaces = [
-      'dummy.mts',
-      'foo/bar.mts',
-      ]
-      for (const defaultinterface of defaultinterfaces){
-        const routefile = join(srcDir,defaultinterfacespreffix,defaultinterface)
-        console.dir(routefile)
-        if (!fsExistsundWritable(routefile)) {
-          const dname = dirname(routefile)
-          if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
-          writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyinterface'])
+        const defaultproviderspreffix = 'providers'
+        const defaultproviders = [
+        'dummy.mts',
+        'foo/bar.mts',
+        ]
+        for (const defaultprovider of defaultproviders){
+          const routefile = join(srcDir,defaultproviderspreffix,defaultprovider)
+          console.dir(routefile)
+          if (!fsExistsundWritable(routefile)) {
+            const dname = dirname(routefile)
+            if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
+            writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyprovider'])
+          }
         }
+        const defaultinterfacespreffix = 'interfaces'
+        const defaultinterfaces = [
+        'dummy.mts',
+        'foo/bar.mts',
+        ]
+        for (const defaultinterface of defaultinterfaces){
+          const routefile = join(srcDir,defaultinterfacespreffix,defaultinterface)
+          console.dir(routefile)
+          if (!fsExistsundWritable(routefile)) {
+            const dname = dirname(routefile)
+            if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
+            writeFileSync(routefile,`// ${routefile}\n`+TEMPLATES['dummyinterface'])
+          }
+        }
+        // TODO handle @next
+        execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.framework}@next`,{shell:true,stdio: 'inherit'})
       }
-      // TODO package.json template
-      execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.framework}@next`,{shell:true,stdio: 'inherit'})
-      //.stdout.pipe(process.stdout)
-      //.stderr.pipe(process.stderr)
+
 
     }
     // paths aliases

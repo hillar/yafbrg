@@ -225,7 +225,7 @@ export function post(foo:string,bar:number):string {...}
 export function del(id:number):boolean {...} // `delete` is a reserved word
 ```
 ### Rest parameters
-A route can have multiple dynamic parameters, denoted with **[],{},:**,
+A route can have multiple dynamic parameters, denoted with **[]** or **{}** or **:**,
 for example
 - src/routes/ **[** category **]** / **[** item **]** .mts
 - src/routes/ **{** category **}** / **{** item **}** .mts
@@ -267,6 +267,15 @@ polka()
 })
 ```
 
+server code generator to decide which is what
+```
+for (const { name, type, required } of method.parameters) {
+  if (!primitives.includes(type)) args.push(`body?.${name}`) // interface
+  else if (route.keys.includes(name)) args.push(`params?.${name}`) // denoted in file path
+  else args.push(`query?.${name}`)
+}
+```
+
 ## OpenAPI
 
 [core-types-ts](https://github.com/grantila/core-types-ts) is used to convert typescript to openapi schemas. Sadly have not (yet) found tool to convert *paths*, so had to write one ;/
@@ -282,7 +291,7 @@ For now default in configuration is *openapi-generator*.
 
 Planned: filenames strarting with **__** are **preHandlers**  and filenames ending with **__** are **postHandlers**
 
-Server code is generated simply replacing parts of template with good old **mustache** planned: Supported *frameworks* are:  node:http, polka, koa, fastify, exspress. Customize template as needed.
+Server code is generated simply replacing parts of template with good old **mustache**.  Theoretically any framework based on **node:http** like *polka, koa, fastify, exspress* can be used. Expected is that denoting of route parameters in the path with **:** is supported, and http methods are handled with handler functions.
 
 ```
 import { default as polka } from 'polka'
@@ -304,18 +313,36 @@ polka()
 
 ```
 
-planned: supported *frameworks* are:  polka,koa,fastify,exspress
 
 
 ## .yafbrg_clirc
 
-options are readed from:
+options are valued in following order:
 
 1. .yafbrg_clirc
 1. env
 1. command line
+1. default
 
-## pre-defined code templates
+## pre-defined code templates aka Skeletons
+
+**Skeletons** are baseline applications which meet some non-functionals (boilerplate code),
+things which no one really wants to reinvent. Skeleton is used only once in first run, if workdir is empty.
+
+## monorepos
+
+just use symlinks ;)
+
+```
+common -> ../../common
+interfaces
+providers
+routes
+```
+
+```
+import { auth } from '$common/auth/freeipa.mjs'
+```
 
 ---------------------
 
