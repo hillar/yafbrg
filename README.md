@@ -282,17 +282,40 @@ For now default in configuration is *openapi-generator*.
 
 Planned: filenames strarting with **__** are **preHandlers**  and filenames ending with **__** are **postHandlers**
 
-Server code is generated simply replacing parts of template. planned: Supported *frameworks* are:  node:http, polka, koa, fastify, exspress. Customize template as needed.
+Server code is generated simply replacing parts of template with good old **mustache** planned: Supported *frameworks* are:  node:http, polka, koa, fastify, exspress. Customize template as needed.
 
 ```
 import { default as polka } from 'polka'
-/*IMPORTS*/
+{{#imports}}
+import { {{#exports}} {{named}} as {{alias}} {{/exports}} } from '{{specifier}}'
+{{/imports}}
+
 polka()
-/*ROUTES*/
-.listen(6789)
+    {{#methods}}
+    .{{method}}('{{route}}',  (req, res, next) => {
+      const { params, query, body } = req
+      res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
+      res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
+    })
+    {{/methods}}
+.listen({{port}}, () => {
+  console.log("> Polka server running on localhost:",{{port}});
+})
+
 ```
 
 planned: supported *frameworks* are:  polka,koa,fastify,exspress
+
+
+## .yafbrg_clirc
+
+options are readed from:
+
+1. .yafbrg_clirc
+1. env
+1. command line
+
+## pre-defined code templates
 
 ---------------------
 

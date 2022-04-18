@@ -74,14 +74,17 @@ export class Cli extends Settable {
       }
     }
     if (createRCFileinHomedir) {
+      // TODO exluce list
+      const exludes = ['workDir','outDir','production']
       let rcStr = ''
       for (const settable of this.settings){
-        rcStr += `${settable}=${this[settable]}\n`
+        if (!exludes.includes(settable)) rcStr += `${settable}=${this[settable]}\n`
       }
       try {
-        writeFileSync(join(homedir(),rcFile),rcStr)
-        if (process.stdout.isTTY) console.log('created',join(homedir(),rcFile))
+        writeFileSync(rcFile,rcStr)
+        if (process.stdout.isTTY) console.log('created',rcFile)
       } catch (error) {
+        console.error(error)
         //noop
       }
     }
