@@ -281,7 +281,7 @@ for (const { name, type, required } of method.parameters) {
 [core-types-ts](https://github.com/grantila/core-types-ts) is used to convert typescript to openapi schemas. Sadly have not (yet) found tool to convert *paths*, so had to write one ;/
 
 To make documentation out of openapi definition file, any tool can be used (openapi-to-md, widdershins, ..)
-For now default in configuration is *openapi-generator*.
+For now default in configuration is [openapi-generator](https://github.com/OpenAPITools/openapi-generator)
 
 ## Server code generation
 

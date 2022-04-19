@@ -20,6 +20,16 @@ function fsExistsundWritable(name){
   }
 }
 
+function fsExistsundExecutable(name){
+  try {
+    accessSync(name, constants.R_OK | constants.X_OK);
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+
 // ----
 
 const ALLOWEDMETHODS = ['HEAD','GET','POST','PUT','PATCH','DEL']
@@ -106,18 +116,15 @@ const packagemanager = (v) => {
 const docsgenerator = (v) => {
   if (!v) return '/usr/local/bin/openapi-generator generate -g markdown -i '
   const cmd = v.split(' ')[0]
-  //if (fsExistsundExecutable(cmd))
-  // else throw new Error('not found or not executable: '+cmd)
-  return v
+  if (fsExistsundExecutable(cmd)) return v
+  else throw new Error('not found or not executable: '+cmd)
+
 }
 
 const SRCPATH = 'src'
 const ROUTESPATH = 'routes'
 const DOCSPATH = 'docs'
 const TEMPLATESUFFIX = '-server.mustache'//.template.mjs'
-
-
-
 
 
 class YAFBRG_Cli extends Cli{
@@ -136,7 +143,6 @@ class YAFBRG_Cli extends Cli{
     this.cached = {routes:new Map(), schemas:new Map()}
   }
   async firstrun(){
-    const dev = process.env.NODE_ENV !== "production";
     if (!this.workDir.startsWith('./')) this.workDir = './'+this.workDir
     const srcDir = join(this.workDir,SRCPATH)
     this.srcDir = srcDir
@@ -150,27 +156,12 @@ class YAFBRG_Cli extends Cli{
       mkdirSync(this.docsDir)
       mkdirSync(this.srcDir)
       mkdirSync(this.routesDir)
-      if (!fsExistsundWritable(srcDir)) mkdirSync(srcDir)
-
       const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
-
       if (this.skeleton) {
         console.log('using skeleton',this.skeleton)
         // just copy all
         await copy(resolve(this.skeleton),resolve(this.workDir))
         execaCommandSync(`cd "${this.workDir}" && ${this.packagemanager} install`,{shell:true,stdio: 'inherit'})
-
-        /*
-        const skeletonFilename = join(this.skeleton,this.framework+TEMPLATESUFFIX)
-        try {
-          let template = readFileSync(skeletonFilename,'utf-8')
-          writeFileSync(templateFilename,template)
-
-        } catch (error) {
-          console.error(skeletonFilename)
-          console.error(error)
-        }
-        */
       } else { // no skeleteon, just fill dirs with hardcoded stuff ...
         console.log('using hardcoded sample')
         let template = getDefaultTemplate([this.framework])
@@ -223,8 +214,6 @@ class YAFBRG_Cli extends Cli{
         // TODO handle @next
         execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.framework}@next`,{shell:true,stdio: 'inherit'})
       }
-
-
     }
     // paths aliases
     // TODO check is symbolic link directory
@@ -295,7 +284,6 @@ class YAFBRG_Cli extends Cli{
           this.cached.routes.delete(route.pattern.toString())
         }
       }
-
       const methods = []
       const { methods:maybeMethods, interfaces} = parsed
       for (const method of maybeMethods) {
@@ -344,12 +332,8 @@ class YAFBRG_Cli extends Cli{
     }
     if (paramWarnings.length || schemaConflicts.length || routeConflicts.length) return false
 
-
-
     // prep for openapi
-
     const types =  []
-
     //console.log('using interfaces:')
     let tmp = []
     this.cached.schemas.forEach((v)=>{
@@ -412,10 +396,7 @@ class YAFBRG_Cli extends Cli{
     // make server
     const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)){
-      //const templateServer = readFileSync(templateFilename,'utf-8')
-      //console.dir(this.cached.routes)
       const serverSource = render(templateFilename,routes2data(this.cached.routes,this.port,this.srcDir))
-      //const serverSource = toPolka(templateServer,this.cached.routes,this.srcDir,this.port)
       const serverFilename = join(this.outDir,SRCPATH,this.framework+'-server.mjs')
       writeFileSync(serverFilename,serverSource)
     } else {

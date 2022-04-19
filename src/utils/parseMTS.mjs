@@ -26,7 +26,6 @@ export const primitives = ['number', 'string', 'boolean', 'bigint', 'symbol', 'n
   for (createdFiles)
 */
 async function compile(filename, outDir, rootDir, paths) {
-  console.dir(paths)
   let counter = 0
   if (process.stdout.isTTY) console.log('compiling with', chalk.blue.bold('tsc --target esnext --module nodenext  --moduleResolution nodenext --declaration'), chalk.blue('--outDir', outDir), chalk.green(filename))
   const tscConfig = {
