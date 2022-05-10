@@ -77,7 +77,27 @@ export function render(templateFilename,data){
 }
 
 
-export function routes2data(routes,port,outDir) {
+function genType(type,schemas){
+  let result = {}
+  //result = t
+  if (type?.charAt) {
+    return type
+  } else if (typeof type === 'object') {
+    for (const key of Object.keys(type)){
+      result[key] = {required:type[key].required}
+      if (type[key]?.node?.ref){
+        console.dir({key,s:schemas.get(type[key].node.ref)})
+        result[key].type = genType(schemas.get(type[key].node.ref).properties,schemas)
+      } else result[key].type = type[key]?.node?.type
+    }
+  } else {
+    throw new Error('genType should not happen')
+  }
+  return result
+}
+
+export function routes2data(routesandschemas,port,outDir) {
+  const {routes, schemas } = routesandschemas
   const data = { port, imports:[], methods:[] }
   routes.forEach(({route, methods })=> {
     let bittes = []
@@ -87,10 +107,21 @@ export function routes2data(routes,port,outDir) {
       const importAs = `${method.name}${bittes.join('')}`
       importsAs.push({named:method.name, alias: importAs})
       const args = []
+      const validations = []
       for (const {name,type,required} of method.parameters) {
-        if (!primitives.includes(type)) args.push(`body?.${name}`)
-        else if (route.keys.includes(name)) args.push(`params?.${name}`)
-        else args.push(`query?.${name}`)
+        if (!primitives.includes(type)) {
+          args.push(`body?.${name}`)
+          validations.push({name,arg:`body?.${name}`,type:JSON.stringify(genType(schemas.get(type).properties,schemas),null,4),required})
+          //console.dir(schemas.get(type).properties)
+        } else {
+          if (route.keys.includes(name)) {
+            args.push(`params?.${name}`)
+            validations.push({name,arg:`params?.${name}`,type:`'${type}'`,required})
+          } else {
+            args.push(`query?.${name}`)
+            validations.push({name,arg:`query?.${name}`,type:`'${type}'`,required})
+          }
+        }
       }
 
       let async = method.isAsync ? 'async' : ''
@@ -111,7 +142,7 @@ export function routes2data(routes,port,outDir) {
       `console.log('${methodName}','${polkafied}',req?.params,req?.query,JSON.stringify(req?.body,null,4))
       `
       */
-      data.methods.push({method:methodName, route:route.polkafied, params:args, async, alias: importAs, contenttype: contentType})
+      data.methods.push({method:methodName, route:route.polkafied, params:args, validations, async, alias: importAs, contenttype: contentType})
     }
     const r = route.compiledFilename.replace(outDir,'.').replace('.mts','.mjs')
     //console.dir({r,rr:route.compiledFilename})

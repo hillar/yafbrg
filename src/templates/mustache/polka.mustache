@@ -1,10 +1,107 @@
+// sample skeleton for polka server
+// EDIT THIS FILE
+
+import { default as polka } from 'polka'
+{{#imports}}
+import { {{#exports}} {{named}} as {{alias}} {{/exports}} } from '{{specifier}}'
+{{/imports}}
+
+/*
+
+400 Bad Request
+
+The 400 (Bad Request) status code indicates that the server cannot or
+will not process the request due to something that is perceived to be
+a client error (e.g., malformed request syntax, invalid request
+message framing, or deceptive request routing).
+
+*/
+
+const capitalize = (s) => {
+  if (typeof s !== 'string') return ''
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+const is = {Number:(v)=>{ if (isNaN(Number(v))) return 'not a number' },String:(v)=>{ if (!v.charAt) return 'not a string'}}
+
+
+function valid(name,value,type,required) {
+
+  if (required && value === undefined) return `${name} is required`
+  if (value === undefined) return
+  const errors = []
+  if (type.charAt) {
+    //const validateFunction = capitalize(type)
+    const result = is[capitalize(type)](value)
+    if (result) errors.push(`${name} ${result}`)
+  } else {
+    for (const key of Object.keys(type)){
+      const result = valid(`${name}.${key}`,value[key],type[key].type, type[key].required)
+      if (result) errors.push(result)
+    }
+  }
+  console.dir({name,value,type,required,errors})
+  return errors.length ? errors : undefined
+}
+
+
+polka({onError: (err, req, res, _next) => {
+
+  if (err instanceof SyntaxError || err instanceof TypeError) {
+    console.error(err)
+    process.exit(1)
+  } else {
+    res.statusCode = err.status ? err.status : 400
+    res.end(JSON.stringify(err))
+  }
+}})
+    .use((req,res,next)=>{
+        const body = []
+        req.on('data', chunk => body.push(chunk))
+        req.on('end', () => {
+          try {
+            const tmp = Buffer.concat(body).toString()
+            if (tmp.length) req.body = JSON.parse(tmp)
+          } catch (error) {
+            error.statusCode = 415
+            throw error
+          } finally {
+            next()
+          }
+        })
+    })
+    {{#methods}}
+    .{{method}}('{{route}}',  (req, res, next) => {
+      const { params, query, body } = req
+      res.setHeader('conten-type','{{contenttype}}; charset=UTF-8')
+      const errors = []
+      {{#validations}}
+
+       const result{{name}} = valid('{{name}}',{{arg}},{{type}},{{required}})
+       if (result{{name}}?.length) errors.push(result{{name}})
+       console.dir({result{{name}},errors})
+
+      {{/validations}}
+      console.dir({errors})
+      if (errors.length) {
+        console.dir(errors)
+        res.statusCode = 400
+        res.end(JSON.stringify({errors:errors.flat()},null,4))
+      } else res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
+    })
+    {{/methods}}
+.listen({{port}}, () => {
+  console.log("> Polka server running on localhost:",{{port}});
+})
+
+/*
 import { default as polka } from 'polka'
 {{#imports}}
 import { {{#exports}} {{named}} as {{alias}} {{/exports}} } from '{{specifier}}'
 {{/imports}}
 
 polka()
-    
+
     {{#methods}}
     .{{method}}('{{route}}',  (req, res, next) => {
       res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
@@ -14,3 +111,4 @@ polka()
 .listen({{port}}, () => {
   console.log("> Polka server running on localhost:",{{port}});
 })
+*7

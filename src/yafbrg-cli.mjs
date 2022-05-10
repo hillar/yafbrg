@@ -396,7 +396,7 @@ class YAFBRG_Cli extends Cli{
     // make server
     const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)){
-      const serverSource = render(templateFilename,routes2data(this.cached.routes,this.port,this.srcDir))
+      const serverSource = render(templateFilename,routes2data(this.cached,this.port,this.srcDir))
       const serverFilename = join(this.outDir,SRCPATH,this.framework+'-server.mjs')
       writeFileSync(serverFilename,serverSource)
     } else {
