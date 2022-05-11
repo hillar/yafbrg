@@ -86,7 +86,6 @@ function genType(type,schemas){
     for (const key of Object.keys(type)){
       result[key] = {required:type[key].required}
       if (type[key]?.node?.ref){
-        console.dir({key,s:schemas.get(type[key].node.ref)})
         result[key].type = genType(schemas.get(type[key].node.ref).properties,schemas)
       } else result[key].type = type[key]?.node?.type
     }
@@ -112,7 +111,6 @@ export function routes2data(routesandschemas,port,outDir) {
         if (!primitives.includes(type)) {
           args.push(`body?.${name}`)
           validations.push({name,arg:`body?.${name}`,type:JSON.stringify(genType(schemas.get(type).properties,schemas),null,4),required})
-          //console.dir(schemas.get(type).properties)
         } else {
           if (route.keys.includes(name)) {
             args.push(`params?.${name}`)
@@ -145,7 +143,6 @@ export function routes2data(routesandschemas,port,outDir) {
       data.methods.push({method:methodName, route:route.polkafied, params:args, validations, async, alias: importAs, contenttype: contentType})
     }
     const r = route.compiledFilename.replace(outDir,'.').replace('.mts','.mjs')
-    //console.dir({r,rr:route.compiledFilename})
     data.imports.push({specifier:route.compiledFilename.replace(outDir.replace('./',''),'.').replace('.mts','.mjs'), exports: importsAs})
   })
 

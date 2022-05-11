@@ -3,7 +3,7 @@
 
 import { default as polka } from 'polka'
 {{#imports}}
-import { {{#exports}} {{named}} as {{alias}} {{/exports}} } from '{{specifier}}'
+import { {{#exports}} {{named}} as {{alias}}, {{/exports}} } from '{{specifier}}'
 {{/imports}}
 
 /*

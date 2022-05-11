@@ -3,7 +3,7 @@
 import { render, routes2data, getDefaultTemplate } from './utils/mustache.mjs'
 import { Cli } from './utils/cli.mjs'
 import { parseAllMTS, parseRoute, findAllMTS } from './yafbrg.mjs'
-import { compileundparse, toOpenApi, primitives } from './utils/parseMTS.mjs'
+import { compileundparse, toOpenApi, toGraphql, primitives } from './utils/parseMTS.mjs'
 import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, constants, readlinkSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { default as chokidar } from 'chokidar'
@@ -72,6 +72,7 @@ const FASTIFY = 'fastify'
 const FRAMEWORKS = [POLKA,EXPRESS,FASTIFY]
 const PACKAGEMANAGERS = ['npm','pnpm','yarn']
 const OPENAPIFILENAME = 'openapi.json'
+const GQLFILENAME = 'graphql-schema.mjs'
 
 // TODO well known
 const WELLKNOWNSCHEMAPATH = '.well-known/schema-discovery'
@@ -190,7 +191,7 @@ class YAFBRG_Cli extends Cli{
         ]
         for (const defaultprovider of defaultproviders){
           const routefile = join(srcDir,defaultproviderspreffix,defaultprovider)
-          console.dir(routefile)
+
           if (!fsExistsundWritable(routefile)) {
             const dname = dirname(routefile)
             if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
@@ -204,7 +205,7 @@ class YAFBRG_Cli extends Cli{
         ]
         for (const defaultinterface of defaultinterfaces){
           const routefile = join(srcDir,defaultinterfacespreffix,defaultinterface)
-          console.dir(routefile)
+
           if (!fsExistsundWritable(routefile)) {
             const dname = dirname(routefile)
             if (!fsExistsundWritable(dname)) mkdirSync(dname,{recursive:true})
@@ -305,7 +306,6 @@ class YAFBRG_Cli extends Cli{
         if (this.cached.schemas.has(maybeInterface)) {
             const prev = this.cached.schemas.get(maybeInterface)
             const canditate = interfaces[maybeInterface]
-            //console.dir({b:(prev.orig !== canditate.orig),prev,canditate})
             if (prev.orig !== canditate.orig) {
               schemaConflicts.push({interface:maybeInterface,a:prev.orig,b:canditate.orig})
             }
@@ -342,12 +342,15 @@ class YAFBRG_Cli extends Cli{
     })
     //console.log(tmp.sort((a,b)=>a>b?1:-1))
 
+
+
     const {data:openapi} = toOpenApi({ version:1, types })
     // load from package.json
     const { version, name:title, description, author } = this.packageJson
     openapi.info = { version, title, description, contact: { name: author } }
     console.log('using routes:')
     tmp = []
+    const gqlQueries = []
     this.cached.routes.forEach(({route, methods})=>{
       tmp.push(route.orig)
       // "/api/target/{slug}/cases":
@@ -377,22 +380,62 @@ class YAFBRG_Cli extends Cli{
           openapi.paths[route.curlified][mn].requestBody = {required:requestBodyRequired}
           openapi.paths[route.curlified][mn].requestBody.content = {"application/json":{schema:{type: "object",properties:requestBodyproperties}}}
         }
-        if (primitives.includes(method.type)){
-          openapi.paths[route.curlified][mn].responses['200'].content["text/plain"] = {schema:{type:method.type}}
-        } else {
-          openapi.paths[route.curlified][mn].responses['200'].content["application/json"] = {schema:{"$ref":`#/components/schemas/${method.type}`}}
+        /*
+        "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/pet"
+                }
+              }
+        */
+        let type = method.type
+        let isArray = false
+        if (type.endsWith('[]')){
+          isArray = true
+          type = type.replace('[]','')
         }
+        if (primitives.includes(type)){
+          if (!isArray) openapi.paths[route.curlified][mn].responses['200'].content["text/plain"] = {schema:{type:type}}
+          else openapi.paths[route.curlified][mn].responses['200'].content["text/plain"] = {schema:{type:'array',"items": {type} }}
+        } else {
+          if (!isArray) openapi.paths[route.curlified][mn].responses['200'].content["application/json"] = {schema:{"$ref":`#/components/schemas/${type}`}}
+          else openapi.paths[route.curlified][mn].responses['200'].content["application/json"] = {schema:{type:'array',"items": {"$ref":`#/components/schemas/${type}`}}}
+        }
+        const tmpQ = {}
+        tmpQ[method.type] = {...route,...method}
+        gqlQueries.push(tmpQ)
       }
     })
     console.log(tmp.sort((a,b)=>a>b?1:-1))
-    const openApiFilename = join(this.srcDir,OPENAPIFILENAME)
+    let openApiFilename = join(this.outDir,OPENAPIFILENAME)
     writeFileSync(openApiFilename,JSON.stringify(openapi))
+    openApiFilename = join(this.srcDir,OPENAPIFILENAME)
+    writeFileSync(openApiFilename,JSON.stringify(openapi))
+
     // generate docs
     try {
       execaCommandSync(`cd "${this.docsDir}" &&  ${this.docsgenerator} ../${SRCPATH}/${OPENAPIFILENAME}`,{shell:true,stderr: 'inherit'})
     } catch (e) {
       return false
     }
+    // make graphql
+    console.dir(gqlQueries)
+    let {data:gql} = toGraphql({ version:1, types })
+    gql = `export const schema = \`${gql.split('\n').filter(x=>!x.startsWith('#')).join('\n')}\``
+    console.dir(gql)
+    /*
+
+    type Query {
+  tasks: [Task]
+  task(id: ID): Task
+  kaks: [Node]
+  kama(id: ID): Node
+}
+
+    */
+    const gqlFilename = join(this.outDir,GQLFILENAME)
+    writeFileSync(gqlFilename,gql)
+
     // make server
     const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)){
