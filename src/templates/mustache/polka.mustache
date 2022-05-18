@@ -1,10 +1,22 @@
 // sample skeleton for polka server
 // EDIT THIS FILE
+// kala maja
 
 import { default as polka } from 'polka'
 {{#imports}}
 import { {{#exports}} {{named}} as {{alias}}, {{/exports}} } from '{{specifier}}'
 {{/imports}}
+
+import { schema }  from './graphql-schema.mjs'
+import {default as rootValue } from './graphql-resolvers.mjs'
+
+import * as gql from "graphql";
+import { graphqlHTTP } from 'express-graphql'
+
+const { graphql, buildSchema } = gql;
+const serverSchema = buildSchema(schema);
+
+
 
 /*
 
@@ -70,6 +82,11 @@ polka({onError: (err, req, res, _next) => {
           }
         })
     })
+    .use('/graphql', graphqlHTTP({
+    schema: serverSchema,
+    rootValue ,
+    graphiql: true,
+    }))
     {{#methods}}
     .{{method}}('{{route}}',  (req, res, next) => {
       const { params, query, body } = req
@@ -93,22 +110,3 @@ polka({onError: (err, req, res, _next) => {
 .listen({{port}}, () => {
   console.log("> Polka server running on localhost:",{{port}});
 })
-
-/*
-import { default as polka } from 'polka'
-{{#imports}}
-import { {{#exports}} {{named}} as {{alias}} {{/exports}} } from '{{specifier}}'
-{{/imports}}
-
-polka()
-
-    {{#methods}}
-    .{{method}}('{{route}}',  (req, res, next) => {
-      res.setHeader('conten-type','{{contentype}}; charset=UTF-8')
-      res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
-    })
-    {{/methods}}
-.listen({{port}}, () => {
-  console.log("> Polka server running on localhost:",{{port}});
-})
-*7

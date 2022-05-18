@@ -99,11 +99,22 @@ export function parseRoute(orig, loose) {
   	}
     const route = getRoute(orig)
     const polkafied = orig.replaceAll("]",'').replaceAll("}",'').replaceAll("[",":").replaceAll("{",":")
-    let bittes = polkafied.split('/')
+    //let bittes = polkafied.split('/')
+    //bittes = bittes.map(x=>x.startsWith(':')?`{${x.replace(':','')}}`:x)
+    // graphql operation name
+    //let btmp = bittes.filter(x=>x.length).filter(x=>!x.startsWith('{')).map(x=>x[0].toUpperCase()+x.substring(1)).join('')
+
+    let bittes = []
+    for (let bitte of polkafied.replaceAll(":","").split('/')) if (bitte?.[0]) bittes.push(bitte?.[0]?.toUpperCase() + bitte?.substring(1))
+
+    const operationName = bittes.join('')
+    bittes = polkafied.split('/')
     bittes = bittes.map(x=>x.startsWith(':')?`{${x.replace(':','')}}`:x)
     const curlified = bittes.join('/')
     return {
       orig,
+      bittes:bittes.filter(x=>x.length),
+      operationName,
       polkafied,
       curlified,
       route,

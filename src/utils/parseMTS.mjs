@@ -83,7 +83,8 @@ function getImportsundMethods(main, mainFileName ) {
     let type = checker.typeToString(checker.getTypeAtLocation(parameter), parameter, ts.TypeFormatFlags.None)
     const name = parameter.name.escapedText.toString()
     const required = parameter.questionToken?.kind !== ts.SyntaxKind.QuestionToken
-    return { name, type, required }
+    const isPrimitive = primitives.includes(type)
+    return { name, type, required, isPrimitive }
   }
   // walk the AST for ..
   // export const x = (a,b) => {}
@@ -121,6 +122,7 @@ function getImportsundMethods(main, mainFileName ) {
           }
         // export function x(a,b)
         } else if (ts.isFunctionDeclaration(node)) {
+
           const name = node.name.escapedText.toString()
           const parameters = []
           for (const parameter of node.parameters) {
@@ -133,7 +135,20 @@ function getImportsundMethods(main, mainFileName ) {
           let jsDoc = []
           if (node.jsDoc) for (const { comment } of node.jsDoc) jsDoc.push(comment)
           else jsDoc = undefined
-          methods.push({ name, type,isAsync, parameters, jsDoc })
+          // fetch :: TypeError: Request with GET/HEAD method cannot have body.
+          // openapi :: Semantic error : GET operations cannot have a requestBody.
+          // graphql ::The type of Query.foo(filter:) must be Input Type but got: IUserFilter."
+          /*
+          if (name === 'get' || name === 'head') {
+            const hasObjects = parameters.filter(({isPrimitive}) => !isPrimitive)
+            if (hasObjects.length) {
+              console.log('warning',name,'param not primitive')
+              console.log(mainFileName)
+              console.log(hasObjects)
+            }
+          }
+          */
+          methods.push({ name, type, isAsync, parameters, jsDoc })
         }
       }
       )
@@ -152,50 +167,65 @@ function getImportsundMethods(main, mainFileName ) {
     }
   const typesInParams = [...new Set(methods.map(({ parameters }) => parameters.map(({ type }) => type)).flat())].filter( x => !primitives.includes(x))
   const typesinType = [...new Set(methods.map(({ type }) => type))].filter( x => !primitives.includes(x))
-  const typesInUse = [...new Set([...typesInParams,...typesinType])]
+  const typesInUse = [...new Set([...typesInParams,...typesinType])].map(x=>x.replace('[]',''))
   const x = geetTypes(typesInUse,mainFileName,main)
   return { imports, types:typesInUse, interfaces:x,methods }
 }
 
-
-function geetTypes(types, filename, main){
+// TODO check need for recursion
+function geetTypes(types, filename, main,alreadyFound=[]){
+  //console.dir({types, alreadyFound,filename})
   const result = {}
   const sourceFile = main.getSourceFile(filename)
-  const coreTypes = convertTypeScriptToCoreTypes(sourceFile.text)
+  // TODO handle no sourceFile.text
+  const coreTypes = convertTypeScriptToCoreTypes(sourceFile?.text)
   const refs = []
   const has = coreTypes.data.types.map( ({name}) => name )
-  const needs = []//coreTypes.data.types.map( ({properties}) => properties?.map(({node})=> node.ref) )
-  for (const { properties } of coreTypes.data.types){
-    for (const key of Object.keys(properties)){
-      const ref = properties[key].node.ref
-      if (ref) needs.push(ref)
-    }
-  }
-  const needed = coreTypes.data.types.filter(({name}) => [...types,...needs].includes(name))
-  for (const type of needed){
-    const {name, properties} = type
-    result[name] = type
-    result[name].orig = filename
-    for (const key of Object.keys(properties)) {
-      const ref = properties[key].node.ref
-      if (ref && !types.includes(ref)){
-        if (!has.includes(ref)) refs.push(ref)
+  for (const lookfor of types) {
+    if (has.includes(lookfor)) {
+      const needs = []//coreTypes.data.types.map( ({properties}) => properties?.map(({node})=> node.ref) )
+      //console.dir(coreTypes.data.types)
+      for (const { properties, name, title } of coreTypes.data.types){
+        if (properties) {
+          for (const key of Object.keys(properties)){
+            const ref = properties[key].node.ref
+            if (ref) needs.push(ref)
+          }
+        } else console.log('no proerties',filename,name )
+      }
+      const needed = coreTypes.data.types.filter(({name}) => [...types,...needs].includes(name))
+      for (const type of needed){
+        const {name, properties} = type
+        result[name] = type
+        result[name].orig = filename
+        if (properties) {
+          for (const key of Object.keys(properties)) {
+            const ref = properties[key].node.ref
+            if (ref && !types.includes(ref)){
+              if (!has.includes(ref)) refs.push(ref)
+            }
+          }
+        } else console.log('no properties',filename, name )
       }
     }
   }
   const found = Object.keys(result)
-  const notFound = [...new Set([...refs,...types])].filter(x => !found.includes(x))
+  // look for nonprimitives in result
+  const notFound = [...new Set([...refs,...types])].filter(x => !(found.includes(x)||alreadyFound.includes(x)))
+  //console.dir({alreadyFound, types,has,found,notFound})
   if (notFound.length){
     // TODO there is list of imports ..
     // for now just brute force over all imports
     for (const node of sourceFile.imports){
       // resolve $
       const { resolvedModule } = ts.resolveModuleName(node.text,sourceFile.path,main.getCompilerOptions(),main)
-      const { resolvedFileName } = resolvedModule
-      const y = geetTypes(notFound, resolvedFileName, main)
-      for (const key of Object.keys(y)){
-        result[key] = y[key]
-      }
+      if (resolvedModule){
+        const { resolvedFileName } = resolvedModule
+        const y = geetTypes(notFound, resolvedFileName, main,[...alreadyFound,...found])
+        for (const key of Object.keys(y)){
+          result[key] = y[key]
+        }
+      } else console.log('no resolvedModule', node.text, sourceFile.path)
     }
   }
   return result

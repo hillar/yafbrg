@@ -1,8 +1,11 @@
 {
-  "name": "polka",
+  "name": "sample-polka-skeleton",
   "version": "0.0.0",
   "main": ".build/src/polka-server.mjs",
   "devDependencies": {
-    "polka": "^1.0.0-next.22"
+    "express-graphql": "^0.12.0",
+    "polka": "^1.0.0-next.22",
+    "cors": "^2.8.5",
+    "sirv": "^2.0.2"
   }
 }

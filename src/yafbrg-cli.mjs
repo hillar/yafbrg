@@ -72,7 +72,8 @@ const FASTIFY = 'fastify'
 const FRAMEWORKS = [POLKA,EXPRESS,FASTIFY]
 const PACKAGEMANAGERS = ['npm','pnpm','yarn']
 const OPENAPIFILENAME = 'openapi.json'
-const GQLFILENAME = 'graphql-schema.mjs'
+const GQLSCHEMAFILENAME = 'graphql-schema.mjs'
+const GQLSOPERATIONSFILENAME = 'graphql-resolvers.mjs'
 
 // TODO well known
 const WELLKNOWNSCHEMAPATH = '.well-known/schema-discovery'
@@ -272,6 +273,7 @@ class YAFBRG_Cli extends Cli{
     const routeConflicts = []
     const schemaConflicts = []
     const paramWarnings = []
+    const paramErrors = []
     for (const { filename,parsed } of updates ){
       const cleaned = filename.replace(this.routesDir,'').replace('index.mts','').replace('.mts','')
       const route = parseRoute(cleaned)
@@ -297,8 +299,21 @@ class YAFBRG_Cli extends Cli{
             }
           }
         }
+        // check for get head not primitive params
+        // fetch :: TypeError: Request with GET/HEAD method cannot have body.
+        // openapi :: Semantic error : GET operations cannot have a requestBody.
+        // graphql ::The type of Query.foo(filter:) must be Input Type but got: IUserFilter."
+
+        if (method.name === 'get' || method.name === 'head') {
+          const hasObjects = method.parameters.filter(({isPrimitive}) => !isPrimitive)
+          if (hasObjects.length) {
+            paramErrors.push({route:route.orig,method:method.name,params:hasObjects.map(({name}) => name
+            )})
+          }
+        }
         methods.push(method)
       }
+
       this.cached.routes.set(route.pattern.toString(),{route,methods})
 
       //TODO interfaces are deduped before reaching here ;/
@@ -330,7 +345,12 @@ class YAFBRG_Cli extends Cli{
       console.error(paramWarnings)
       console.error('***  ***')
     }
-    if (paramWarnings.length || schemaConflicts.length || routeConflicts.length) return false
+    if (paramErrors.length) {
+      console.error('*** PARAMS ERRORS ***')
+      console.error(paramErrors)
+      console.error('***  ***')
+    }
+    if (paramWarnings.length || schemaConflicts.length || routeConflicts.length || paramErrors.length) return false
 
     // prep for openapi
     const types =  []
@@ -348,11 +368,12 @@ class YAFBRG_Cli extends Cli{
     // load from package.json
     const { version, name:title, description, author } = this.packageJson
     openapi.info = { version, title, description, contact: { name: author } }
-    console.log('using routes:')
+    //console.log('using routes:')
     tmp = []
     const gqlQueries = []
+    const gqlMutations = []
     this.cached.routes.forEach(({route, methods})=>{
-      tmp.push(route.orig)
+      tmp.push({route:route.orig,operationName:route.operationName,b:route.bittes})
       // "/api/target/{slug}/cases":
       openapi.paths[route.curlified] = {}
       for (const method of methods){
@@ -403,12 +424,36 @@ class YAFBRG_Cli extends Cli{
         }
         const tmpQ = {}
         tmpQ[method.type] = {...route,...method}
-        gqlQueries.push(tmpQ)
+        let operation = `${method.name}${route.operationName}`
+        //console.dir(route)
+        if (method.parameters.length){
+          const ops = []
+          for (let {name,type,required} of method.parameters){
+            if (type === 'number') type = 'Float'
+            else if (type === 'string') type = 'String'
+            ops.push(`${name}: ${type}${required ? '! ':''}`)
+          }
+          operation += `( ${ops.join(',')} )`
+        }
+        let response = isArray ? `[${type}]` : type
+        /*
+        POST is always for creating a resource ( does not matter if it was duplicated )
+        PUT is for checking if resource exists then update, else create new resource.
+        PATCH is always for updating a resource.
+        */
+        const opresp = `${operation}: ${response}`
+        if (method.name === 'get') gqlQueries.push(opresp)
+        else gqlMutations.push(opresp)
       }
     })
-    console.log(tmp.sort((a,b)=>a>b?1:-1))
-    let openApiFilename = join(this.outDir,OPENAPIFILENAME)
-    writeFileSync(openApiFilename,JSON.stringify(openapi))
+    //console.log(tmp.sort((a,b)=>a>b?1:-1))
+    if (!fsExistsundWritable(join(this.outDir,SRCPATH,'__openapi__'))) {
+      // TODO https://swagger.io/docs/open-source-tools/swagger-ui/customization/plug-points/#request-snippets
+      mkdirSync(join(this.outDir,SRCPATH,'__openapi__'))
+      await copy(resolve(join(this.srcDir,'__openapi__')),resolve(join(this.outDir,SRCPATH,'__openapi__')))
+    }
+    let openApiFilename = join(this.outDir,SRCPATH,'__openapi__',OPENAPIFILENAME)
+    writeFileSync(openApiFilename,JSON.stringify(openapi,null,4))
     openApiFilename = join(this.srcDir,OPENAPIFILENAME)
     writeFileSync(openApiFilename,JSON.stringify(openapi))
 
@@ -418,28 +463,34 @@ class YAFBRG_Cli extends Cli{
     } catch (e) {
       return false
     }
-    // make graphql
-    console.dir(gqlQueries)
+
+    const renderData = routes2data(this.cached,this.port,this.srcDir)
+
+    // make graphql schema
+    const xQ = `type Query { \n\t${gqlQueries.join('\n\t')}\n}`
+    let xM = `type Mutation { \n\t${gqlMutations.join('\n\t')}\n}`
+    xM = '' // TODO  disable mutations for now
     let {data:gql} = toGraphql({ version:1, types })
-    gql = `export const schema = \`${gql.split('\n').filter(x=>!x.startsWith('#')).join('\n')}\``
-    console.dir(gql)
-    /*
-
-    type Query {
-  tasks: [Task]
-  task(id: ID): Task
-  kaks: [Node]
-  kama(id: ID): Node
-}
-
-    */
-    const gqlFilename = join(this.outDir,GQLFILENAME)
-    writeFileSync(gqlFilename,gql)
+    gql = `export const schema = \`${gql.split('\n').filter(x=>!x.startsWith('#')).join('\n')}\n${xQ}\n${xM}\``
+    const gqlSchemaFilename = join(this.outDir,SRCPATH,GQLSCHEMAFILENAME)
+    writeFileSync(gqlSchemaFilename,gql)
+    // TODO verify schema with gql.buildSchema(..)
+    // make graphql resolvers
+    const gqlOpsFilename = join(this.outDir,SRCPATH,GQLSOPERATIONSFILENAME)
+    const tmpimps = []
+    const tmpOps = []
+    for (const i of renderData.imports){
+      i.exports.map(({alias})=>tmpOps.push(alias))
+      const aliases = i.exports.map(({named,alias})=>`${named} as ${alias}`).join(', ')
+      tmpimps.push(`import {${aliases}} from '${i.specifier}'`)
+    }
+    const opsFile = `${tmpimps.join('\n')}\n\nexport default {\n\t${tmpOps.join(',\n\t')}\n}`
+    writeFileSync(gqlOpsFilename,opsFile)
 
     // make server
     const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)){
-      const serverSource = render(templateFilename,routes2data(this.cached,this.port,this.srcDir))
+      const serverSource = render(templateFilename, renderData)//routes2data(this.cached,this.port,this.srcDir))
       const serverFilename = join(this.outDir,SRCPATH,this.framework+'-server.mjs')
       writeFileSync(serverFilename,serverSource)
     } else {

@@ -24,6 +24,6 @@
     "typescript-transform-paths": "^3.3.1"
   },
   "scripts": {
-    "dev": "nodemon -w ./src -x node ./src/yafbrg-cli.mjs ./tmp/dev --skeleton=samples/skeletetons/polka"
+    "dev": "nodemon -w ./src -x node ./src/yafbrg-cli.mjs ./tmp/dev22 --skeleton=samples/skeletetons/polka"
   }
 }
