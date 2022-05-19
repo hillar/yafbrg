@@ -6,6 +6,7 @@ import { parseAllMTS, parseRoute, findAllMTS } from './yafbrg.mjs'
 import { compileundparse, toOpenApi, toGraphql, primitives } from './utils/parseMTS.mjs'
 import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, constants, readlinkSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url';
 import { default as chokidar } from 'chokidar'
 import { execa, execaCommandSync } from 'execa'
 import copy from 'recursive-copy';
@@ -66,12 +67,22 @@ const TEMPLATES = {
 
 // ----
 
-const POLKA = 'polka'
-const EXPRESS = 'express'
-const FASTIFY = 'fastify'
-const FRAMEWORKS = [POLKA,EXPRESS,FASTIFY]
+function getFrameworks(){
+  const selfDir = dirname(fileURLToPath(import.meta.url))
+  const defaultSekeletonsDir = resolve(join(selfDir,'../samples/skeletetons'))
+  const skeles = readdirSync(defaultSekeletonsDir)
+}
+
+
+
+
+//const POLKA = 'polka'
+//const EXPRESS = 'express'
+//const FASTIFY = 'fastify'
+//const FRAMEWORKS = getFrameworks() //[POLKA,EXPRESS,FASTIFY]
 const PACKAGEMANAGERS = ['npm','pnpm','yarn']
 const OPENAPIFILENAME = 'openapi.json'
+const OPENAPIDIRNAME = '__openapi__'
 const GQLSCHEMAFILENAME = 'graphql-schema.mjs'
 const GQLSOPERATIONSFILENAME = 'graphql-resolvers.mjs'
 
@@ -97,15 +108,21 @@ const port = (v) => {
 const production = (v) => {
   return v ? true : (process.env.NODE_ENV === 'production' ? true : false)
 }
-const framework = (v) => {
-  if (!v) return POLKA
-  if (FRAMEWORKS.includes(v)) return v
-  else throw new Error('must be one of:' + FRAMEWORKS.join(','))
+
+function getSkeletonDir(){
+  return resolve(join(dirname(fileURLToPath(import.meta.url)),'../samples/skeletetons'))
 }
+const FRAMEWORKS = readdirSync(getSkeletonDir()).sort()
+const framework = (v) => {
+  if (!v) return FRAMEWORKS[0]
+  if (FRAMEWORKS.includes(v)) return v
+  else throw new Error('must be one of: ' + FRAMEWORKS.join(', ')+'\ngot :"'+ v+'"')
+}
+const sample = framework
 
 const skeleton = (v) => {
   if (!v) return ''
-  if (fsExistsundWritable(v)) return v
+  if (fsExistsundWritable(v) && fsExistsundWritable(resolve(join(v,SRCPATH)))) return v
   else throw new Error('can not find skeleton: ' + v)
 }
 
@@ -131,20 +148,23 @@ const TEMPLATESUFFIX = '-server.mustache'//.template.mjs'
 
 class YAFBRG_Cli extends Cli{
   constructor(){
-    super({workDir:`./${framework()}`,outDir:`./${framework()}/.build`},{port, framework, production,docsgenerator,packagemanager,skeleton})
-    if (this.workDir !== framework() && this.outDir === `./${framework()}/.build`){
+    super({workDir:`./`},{port, sample, production,docsgenerator,packagemanager,skeleton})
+      //this.workDir = resolve(this.workDir)
+    //if (this.workDir !== framework() && this.outDir === `./${framework()}/.build`){
       this.outDir = this.workDir+'/.build'
-    }
+    //}
     if (process.stdout.isTTY) {
       console.log(this.prototypeof.toLowerCase(),'starting with:',this.defaults)
     }
-    if (resolve(this.skeleton) === resolve(this.workDir)) {
+    if (this.skeleton.length && resolve(this.skeleton) === resolve(this.workDir)) {
       console.error('skeleton can not be same as workdir: ', this.skeleton)
       process.exit(1)
     }
     this.cached = {routes:new Map(), schemas:new Map()}
   }
   async firstrun(){
+    const selfDir = dirname(fileURLToPath(import.meta.url))
+    const defaultSekeletonsDir = resolve(join(selfDir,'../sample/skeletetons'))
     if (!this.workDir.startsWith('./')) this.workDir = './'+this.workDir
     const srcDir = join(this.workDir,SRCPATH)
     this.srcDir = srcDir
@@ -152,21 +172,29 @@ class YAFBRG_Cli extends Cli{
     this.routesDir = routesDir
     this.docsDir = join(this.workDir,DOCSPATH)
     // there is no workir, make one
-    if (!fsExistsundWritable(this.workDir)) {
+    //resolve(join(this.workDir,SRCPATH))
+    if (!fsExistsundWritable(resolve(join(this.workDir,SRCPATH)))) {
+      //TODO check for existing dirs & files and warn ...
       console.log('bootstraping ...')
-      mkdirSync(this.workDir)
+      if (!fsExistsundWritable(resolve(join(this.workDir)))) mkdirSync(this.workDir)
       mkdirSync(this.docsDir)
       mkdirSync(this.srcDir)
       mkdirSync(this.routesDir)
-      const templateFilename = join(srcDir,this.framework+TEMPLATESUFFIX)
+      //const templateFilename = join(srcDir,this.sample+TEMPLATESUFFIX)
       if (this.skeleton) {
         console.log('using skeleton',this.skeleton)
         // just copy all
         await copy(resolve(this.skeleton),resolve(this.workDir))
         execaCommandSync(`cd "${this.workDir}" && ${this.packagemanager} install`,{shell:true,stdio: 'inherit'})
       } else { // no skeleteon, just fill dirs with hardcoded stuff ...
-        console.log('using hardcoded sample')
-        let template = getDefaultTemplate([this.framework])
+        const skeleDir = join(getSkeletonDir(),this.sample)
+        console.log('using hardcoded sample:',skeleDir)
+        await copy(resolve(skeleDir),resolve(this.workDir))
+        execaCommandSync(`cd "${this.workDir}" && ${this.packagemanager} install`,{shell:true,stdio: 'inherit'})
+        //const
+
+        /*
+        let template = getDefaultTemplate([this.sample])
         if (!fsExistsundWritable(templateFilename)) writeFileSync(templateFilename,template)
         const defaultroutepreffix = 'api/v1'
         const defaultroutes = [
@@ -214,12 +242,14 @@ class YAFBRG_Cli extends Cli{
           }
         }
         // TODO handle @next
-        execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.framework}@next`,{shell:true,stdio: 'inherit'})
+        execaCommandSync(`cd "${this.workDir}" && pwd && npm init -y && yarn add -D ${this.sample}@next`,{shell:true,stdio: 'inherit'})
+        */
       }
     }
     // paths aliases
     // TODO check is symbolic link directory
-    const tmppathAliases = readdirSync(join(this.workDir,SRCPATH),{withFileTypes:true})
+    console.dir(resolve(join(this.workDir,SRCPATH)))
+    const tmppathAliases = readdirSync(resolve(join(this.workDir,SRCPATH)),{withFileTypes:true})
     .filter(f=>f.isDirectory()||f.isSymbolicLink())
     .map(f=>f.name)
     .filter(x=>x!==ROUTESPATH)
@@ -229,7 +259,7 @@ class YAFBRG_Cli extends Cli{
       this.pathAliases = {...this.pathAliases,...p}
     }
     // read package.json
-    const packageFilename = join(this.workDir,'package.json')
+    const packageFilename = resolve(join(this.workDir,'package.json'))
     this.packageJson = JSON.parse(readFileSync(packageFilename,'utf-8'))
     // build prod or start watching changes ..
     if (this.production){
@@ -447,12 +477,12 @@ class YAFBRG_Cli extends Cli{
       }
     })
     //console.log(tmp.sort((a,b)=>a>b?1:-1))
-    if (!fsExistsundWritable(join(this.outDir,SRCPATH,'__openapi__'))) {
+    if (!fsExistsundWritable(join(this.outDir,SRCPATH,OPENAPIDIRNAME))) {
       // TODO https://swagger.io/docs/open-source-tools/swagger-ui/customization/plug-points/#request-snippets
-      mkdirSync(join(this.outDir,SRCPATH,'__openapi__'))
-      await copy(resolve(join(this.srcDir,'__openapi__')),resolve(join(this.outDir,SRCPATH,'__openapi__')))
+      //mkdirSync(join(this.outDir,SRCPATH,OPENAPIDIRNAME))
+      await copy(resolve(join(this.srcDir,OPENAPIDIRNAME)),resolve(join(this.outDir,SRCPATH,OPENAPIDIRNAME)))
     }
-    let openApiFilename = join(this.outDir,SRCPATH,'__openapi__',OPENAPIFILENAME)
+    let openApiFilename = join(this.outDir,SRCPATH,OPENAPIDIRNAME,OPENAPIFILENAME)
     writeFileSync(openApiFilename,JSON.stringify(openapi,null,4))
     openApiFilename = join(this.srcDir,OPENAPIFILENAME)
     writeFileSync(openApiFilename,JSON.stringify(openapi))
@@ -488,24 +518,62 @@ class YAFBRG_Cli extends Cli{
     writeFileSync(gqlOpsFilename,opsFile)
 
     // make server
-    const templateFilename = join(this.srcDir,this.framework+TEMPLATESUFFIX)
-    if (fsExistsundWritable(templateFilename)){
+    // find server template
+    //const  templateFilename = join(this.srcDir,this.sample+TEMPLATESUFFIX)
+    const { serverFilename, templateFilename } = findTemplateFileUndMakeServerFilename(cli.srcDir,cli.outDir,TEMPLATESUFFIX)
+    console.dir({ serverFilename, templateFilename })
+    if (fsExistsundWritable(templateFilename)) {
+
       const serverSource = render(templateFilename, renderData)//routes2data(this.cached,this.port,this.srcDir))
-      const serverFilename = join(this.outDir,SRCPATH,this.framework+'-server.mjs')
-      writeFileSync(serverFilename,serverSource)
+      //const serverFilename = join(this.outDir,SRCPATH,this.sample+'-server.mjs')
+      console.log('using',templateFilename,'for',serverFilename)
+      writeFileSync(serverFilename,serverSource)/*
     } else {
-      console.error('cant find server template file', templateFilename)
+      const [maybeTempalteFilename] = readdirSync(this.srcDir).filter(x=>x.endsWith(TEMPLATESUFFIX))
+      if (maybeTempalteFilename) {
+        const  templateFilename = join(this.srcDir,maybeTempalteFilename)
+        if (fsExistsundWritable(templateFilename)){
+
+          const serverSource = render(templateFilename, renderData)//routes2data(this.cached,this.port,this.srcDir))
+          const serverFilename = join(this.outDir,SRCPATH,maybeTempalteFilename.replace(TEMPLATESUFFIX,'.mjs'))
+          console.log('using',templateFilename,'for ',serverFilename)
+          writeFileSync(serverFilename,serverSource)
+        } else {
+          console.error('cant use server template file' , templateFilename)
+          return false
+        }
+
+      } else {
+        console.error('cant find server template file in ' , this.srcDir)
+        return false
+      }
+      */
+    } else {
+      console.error('cant find server template file in ' , this.srcDir, templateFilename)
       return false
     }
     return true
   }
 }
 
+function findTemplateFileUndMakeServerFilename(srcDir,outDir,suffix) {
+  const [maybeTempalteFilename] = readdirSync(srcDir).filter(x=>x.endsWith(suffix))
+  if (maybeTempalteFilename) {
+    const  templateFilename = join(srcDir,maybeTempalteFilename)
+    if (fsExistsundWritable(templateFilename)){
+        const serverFilename = join(outDir,SRCPATH,maybeTempalteFilename.replace(suffix,'.mjs'))
+        return { serverFilename, templateFilename }
+    }
+  }
+  throw new Error('cant find template in '+srcDir+' with' + suffix)
+
+}
 
 const cli = new YAFBRG_Cli()
 await cli.firstrun()
-
-const serverFilename = join('./',cli.outDir,SRCPATH,cli.framework+'-server.mjs')
+// TODO check for template name
+const { serverFilename } = findTemplateFileUndMakeServerFilename(cli.srcDir,cli.outDir,TEMPLATESUFFIX)
+//const serverFilename = join('./',cli.outDir,SRCPATH,cli.sample+'-server.mjs')
 let subprocessServer
 let paths = []
 let timeoutId

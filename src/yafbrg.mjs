@@ -241,11 +241,11 @@ routes.forEach(({route, methods })=> {
     }
     let isAwait = method.isAsync ? 'await' : ''
     let isAsync = method.isAsync ? 'async' : ''
-    let contentType = "res.setHeader('conten-type','application/json; charset=UTF-8')"
+    let contentType = "res.setHeader('content-type','application/json; charset=UTF-8')"
     let send = ` ${contentType}
       res.end(JSON.stringify(${isAwait} ${importAs}(${args})))`
     if (primitives.includes(method.type)) {
-      contentType = "res.setHeader('conten-type','text/plain; charset=UTF-8')"
+      contentType = "res.setHeader('content-type','text/plain; charset=UTF-8')"
       send = ` ${contentType}
       res.end(''+${isAwait} ${importAs}(${args}))`
 

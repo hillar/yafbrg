@@ -1,0 +1,123 @@
+// sample skeleton for express server
+// EDIT THIS FILE
+
+//import { default as polka } from 'polka'
+{{#imports}}
+import { {{#exports}} {{named}} as {{alias}}, {{/exports}} } from '{{specifier}}'
+{{/imports}}
+
+import { schema }  from './graphql-schema.mjs'
+import {default as rootValue } from './graphql-resolvers.mjs'
+
+import cors  from 'cors'
+
+import * as gql from "graphql";
+import { graphqlHTTP } from 'express-graphql'
+
+// for swagger ui
+import sirv from 'sirv'
+import {join,dirname} from 'node:path'
+import {fileURLToPath} from 'node:url';
+
+
+const { graphql, buildSchema } = gql;
+const serverSchema = buildSchema(schema);
+
+
+const capitalize = (s) => {
+  if (typeof s !== 'string') return ''
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+const is = {Number:(v)=>{ if (isNaN(Number(v))) return 'not a number' },String:(v)=>{ if (!v.charAt) return 'not a string'}}
+
+
+function valid(name,value,type,required) {
+
+  if (required && value === undefined) return `${name} is required`
+  if (value === undefined) return
+  const errors = []
+  if (type.charAt) {
+    //const validateFunction = capitalize(type)
+    const result = is[capitalize(type)](value)
+    if (result) errors.push(`${name} ${result}`)
+  } else {
+    for (const key of Object.keys(type)){
+      const result = valid(`${name}.${key}`,value[key],type[key].type, type[key].required)
+      if (result) errors.push(result)
+    }
+  }
+  console.dir({name,value,type,required,errors})
+  return errors.length ? errors : undefined
+}
+
+
+polka({onError: (err, req, res, _next) => {
+
+  if (err instanceof SyntaxError || err instanceof TypeError) {
+    console.error(err)
+    process.exit(1)
+  } else {
+    /*
+
+    if error status or statusCode is not set, then 400 is used
+
+    400 Bad Request
+
+    The 400 (Bad Request) status code indicates that the server cannot or
+    will not process the request due to something that is perceived to be
+    a client error (e.g., malformed request syntax, invalid request
+    message framing, or deceptive request routing).
+
+    */
+    res.statusCode = err.status ? err.status : (err.statusCode ? err.statusCode: 400)
+    res.end(JSON.stringify(err))
+  }
+}})
+    .use(cors({
+        origin: '*'
+    }))
+    .use('/openapi',sirv(join(dirname(fileURLToPath(import.meta.url)),'__openapi__'),{single:true,dev:true}))
+    .use((req,res,next)=>{
+        const body = []
+        req.on('data', chunk => body.push(chunk))
+        req.on('end', () => {
+          try {
+            const tmp = Buffer.concat(body).toString()
+            if (tmp.length) req.body = JSON.parse(tmp)
+          } catch (error) {
+            error.statusCode = 415
+            throw error
+          } finally {
+            next()
+          }
+        })
+    })
+    .use('/graphql', graphqlHTTP({
+    schema: serverSchema,
+    rootValue ,
+    graphiql: true,
+    }))
+    {{#methods}}
+    .{{method}}('{{route}}',  (req, res, next) => {
+      const { params, query, body } = req
+      res.setHeader('conten-type','{{contenttype}}; charset=UTF-8')
+      const errors = []
+      {{#validations}}
+
+       const result{{name}} = valid('{{name}}',{{arg}},{{type}},{{required}})
+       if (result{{name}}?.length) errors.push(result{{name}})
+       console.dir({result{{name}},errors})
+
+      {{/validations}}
+      console.dir({errors})
+      if (errors.length) {
+        console.dir(errors)
+        res.statusCode = 400
+        res.end(JSON.stringify({errors:errors.flat()},null,4))
+      } else res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
+    })
+    {{/methods}}
+.listen({{port}}, () => {
+  console.log("> Polka server running on localhost:",{{port}});
+})

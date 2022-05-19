@@ -58,9 +58,12 @@ export class Cli extends Settable {
       if (is.length>0){
         const bittes = is[0].split("=")
         if (bittes.length === 2) {
-          process.env[settable.toUpperCase()] = bittes[1]
+          const clean = bittes[0].replace('--','').toUpperCase()
+          if (settable.toUpperCase() === clean)
+            process.env[settable.toUpperCase()] = bittes[1]
         } else {
           const i = cmdArgs.indexOf(is[0])
+          // TODO chech match
           process.env[settable.toUpperCase()] = cmdArgs[i+1]
         }
       }
@@ -96,9 +99,13 @@ export class Cli extends Settable {
   }
   help(){
     const defaults = this.defaults
-    console.log('params:', this.#params.join(' '))
+    //console.log('params:', this.#params.join(' '))
+    console.log('params:')
+    for (const param of Object.keys(defaults).filter(x=>this.#params.includes(x))){
+      console.log(`${param}`,'\t default:',defaults[param])
+    }
     console.log('options:')
-    for (const param of Object.keys(defaults)){
+    for (const param of Object.keys(defaults).filter(x=>!this.#params.includes(x))){
       console.log(`--${param}`,'\t default:',defaults[param])
     }
   }
