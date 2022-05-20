@@ -110,10 +110,3 @@ export class Cli extends Settable {
     }
   }
 }
-
-
-
-/*
-console.dir(cli.settings)
-console.dir(cli.defaults)
-*/

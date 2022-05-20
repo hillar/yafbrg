@@ -99,9 +99,9 @@ polka({onError: (err, req, res, _next) => {
     graphiql: true,
     }))
     {{#methods}}
-    .{{method}}('{{route}}',  (req, res, next) => {
+    .{{method}}('{{route}}', {{async}} (req, res, next) => {
       const { params, query, body } = req
-      res.setHeader('conten-type','{{contenttype}}; charset=UTF-8')
+      res.setHeader('content-type','{{contenttype}}; charset=UTF-8')
       const errors = []
       {{#validations}}
 
@@ -115,7 +115,7 @@ polka({onError: (err, req, res, _next) => {
         console.dir(errors)
         res.statusCode = 400
         res.end(JSON.stringify({errors:errors.flat()},null,4))
-      } else res.end(JSON.stringify( {{alias}}({{#params}}{{.}},{{/params}})))
+      } else res.end(JSON.stringify( {{wait}} {{alias}}({{#params}}{{.}},{{/params}})))
     })
     {{/methods}}
 .listen({{port}}, () => {

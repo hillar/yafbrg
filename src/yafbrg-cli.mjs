@@ -477,14 +477,18 @@ class YAFBRG_Cli extends Cli{
       }
     })
     //console.log(tmp.sort((a,b)=>a>b?1:-1))
-    if (!fsExistsundWritable(join(this.outDir,SRCPATH,OPENAPIDIRNAME))) {
-      // TODO https://swagger.io/docs/open-source-tools/swagger-ui/customization/plug-points/#request-snippets
-      //mkdirSync(join(this.outDir,SRCPATH,OPENAPIDIRNAME))
-      await copy(resolve(join(this.srcDir,OPENAPIDIRNAME)),resolve(join(this.outDir,SRCPATH,OPENAPIDIRNAME)))
+    //TODO make OPENAPIDIRNAME param
+    const openapitemplatedir = resolve(join(this.srcDir,OPENAPIDIRNAME))
+    if (fsExistsundWritable(openapitemplatedir)) {
+      if (!fsExistsundWritable(join(this.outDir,SRCPATH,OPENAPIDIRNAME))) {
+        // TODO https://swagger.io/docs/open-source-tools/swagger-ui/customization/plug-points/#request-snippets
+        //mkdirSync(join(this.outDir,SRCPATH,OPENAPIDIRNAME))
+        await copy(resolve(join(this.srcDir,OPENAPIDIRNAME)),resolve(join(this.outDir,SRCPATH,OPENAPIDIRNAME)))
+      }
+      let openApiFilename = join(this.outDir,SRCPATH,OPENAPIDIRNAME,OPENAPIFILENAME)
+      writeFileSync(openApiFilename,JSON.stringify(openapi,null,4))
     }
-    let openApiFilename = join(this.outDir,SRCPATH,OPENAPIDIRNAME,OPENAPIFILENAME)
-    writeFileSync(openApiFilename,JSON.stringify(openapi,null,4))
-    openApiFilename = join(this.srcDir,OPENAPIFILENAME)
+    let openApiFilename = join(this.outDir,OPENAPIFILENAME)
     writeFileSync(openApiFilename,JSON.stringify(openapi))
 
     // generate docs
@@ -518,14 +522,10 @@ class YAFBRG_Cli extends Cli{
     writeFileSync(gqlOpsFilename,opsFile)
 
     // make server
-    // find server template
-    //const  templateFilename = join(this.srcDir,this.sample+TEMPLATESUFFIX)
     const { serverFilename, templateFilename } = findTemplateFileUndMakeServerFilename(cli.srcDir,cli.outDir,TEMPLATESUFFIX)
-    console.dir({ serverFilename, templateFilename })
     if (fsExistsundWritable(templateFilename)) {
-
+      console.dir(renderData)
       const serverSource = render(templateFilename, renderData)//routes2data(this.cached,this.port,this.srcDir))
-      //const serverFilename = join(this.outDir,SRCPATH,this.sample+'-server.mjs')
       console.log('using',templateFilename,'for',serverFilename)
       writeFileSync(serverFilename,serverSource)/*
     } else {
@@ -566,7 +566,6 @@ function findTemplateFileUndMakeServerFilename(srcDir,outDir,suffix) {
     }
   }
   throw new Error('cant find template in '+srcDir+' with' + suffix)
-
 }
 
 const cli = new YAFBRG_Cli()

@@ -123,6 +123,7 @@ export function routes2data(routesandschemas,port,outDir) {
       }
 
       let async = method.isAsync ? 'async' : ''
+      let wait = method.isAsync ? 'await' : ''
       let contentType = "application/json"
       if (primitives.includes(method.type)) {
         contentType = "text/plain"
@@ -140,7 +141,7 @@ export function routes2data(routesandschemas,port,outDir) {
       `console.log('${methodName}','${polkafied}',req?.params,req?.query,JSON.stringify(req?.body,null,4))
       `
       */
-      data.methods.push({method:methodName, route:route.polkafied, params:args, validations, async, alias: importAs, contenttype: contentType})
+      data.methods.push({method:methodName, route:route.polkafied, params:args, validations, async, wait, alias: importAs, contenttype: contentType})
     }
     const r = route.compiledFilename.replace(outDir,'.').replace('.mts','.mjs')
     data.imports.push({specifier:route.compiledFilename.replace(outDir.replace('./',''),'.').replace('.mts','.mjs'), exports: importsAs})

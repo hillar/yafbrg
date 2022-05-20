@@ -214,8 +214,35 @@ function geetTypes(types, filename, main,alreadyFound=[]){
   const notFound = [...new Set([...refs,...types])].filter(x => !(found.includes(x)||alreadyFound.includes(x)))
   //console.dir({alreadyFound, types,has,found,notFound})
   if (notFound.length){
+
+    for (const node of sourceFile.imports){
+      const imported = []
+      const moduleSpecifier = node?.parent?.moduleSpecifier?.text
+      console.dir({moduleSpecifier})
+      if (node?.parent?.importClause?.namedBindings?.elements) for (const element of node.parent.importClause.namedBindings.elements) {
+        if (element.propertyName){
+          const name = element.name.escapedText
+          const realname =  element.propertyName.escapedText
+          imported.push(name)
+        } else imported.push(element.name.escapedText)
+      }
+      const has = imported.filter(x=>notFound.includes(x))
+      if (has.length){
+        // resolve $
+        console.dir({has})
+        const { resolvedModule } = ts.resolveModuleName(node.text,sourceFile.path,main.getCompilerOptions(),main)
+        if (resolvedModule){
+          const { resolvedFileName } = resolvedModule
+          const y = geetTypes(notFound, resolvedFileName, main,[...alreadyFound,...found])
+          for (const key of Object.keys(y)){
+            result[key] = y[key]
+          }
+        } else console.log('no resolvedModule', node.text, sourceFile.path)
+      }
+    }
     // TODO there is list of imports ..
     // for now just brute force over all imports
+    /*
     for (const node of sourceFile.imports){
       // resolve $
       const { resolvedModule } = ts.resolveModuleName(node.text,sourceFile.path,main.getCompilerOptions(),main)
@@ -227,6 +254,7 @@ function geetTypes(types, filename, main,alreadyFound=[]){
         }
       } else console.log('no resolvedModule', node.text, sourceFile.path)
     }
+    */
   }
   return result
 }
