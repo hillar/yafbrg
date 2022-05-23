@@ -23,6 +23,45 @@ import {fileURLToPath} from 'node:url';
 const { graphql, buildSchema } = gql;
 const serverSchema = buildSchema(schema);
 
+const ENVS = []
+const defaults = {}
+{{#envs}}
+// {{from}}
+{{#vars}}
+//{{funcName}} {{varName}}
+ENVS.push('{{envName}}')
+defaults.{{envName}} = {{defaultValue}}
+{{/vars}}
+{{/envs}}
+const cmdArgs = process.argv.slice(2)
+if (cmdArgs.includes('-h') || cmdArgs.includes('--help')) {
+    console.log('options (:default):')
+    console.log(ENVS.map(x=>'\t--'+x.toLowerCase()+''+((defaults[x] && defaults[x]!=='undefined')?' :'+defaults[x] : '')).join('\n'))
+    console.log('enviroment vars (:value):')
+    console.log(ENVS.map(x=>'\t'+x+' '+(process.env[x]?' :'+process.env[x]:'')).join('\n'))
+    process.exit(0)
+}
+for (let settable of ENVS){
+  const is = cmdArgs.filter(x=>x.includes(settable.toLowerCase()))
+  if (is.length>0){
+    console.dir({settable,default:defaults[settable]})
+    const bittes = is[0].split("=")
+    if (bittes.length === 2) {
+      const clean = bittes[0].replace('--','').toUpperCase()
+      if (settable.toUpperCase() === clean)
+        if (process.env[settable]) console.log(settable,'was',process.env[settable])
+        console.log('setting',settable,'to', bittes[1])
+        process.env[settable] = bittes[1]
+    } else {
+      const i = cmdArgs.indexOf(is[0])
+      // TODO chech match
+      if (process.env[settable]) console.log(settable,'was',process.env[settable])
+      console.log('setting',settable,'to', cmdArgs[i+1])
+      process.env[settable] = cmdArgs[i+1]
+    }
+  }
+}
+//console.dir(process.env)
 
 const capitalize = (s) => {
   if (typeof s !== 'string') return ''

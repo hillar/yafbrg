@@ -160,7 +160,7 @@ class YAFBRG_Cli extends Cli{
       console.error('skeleton can not be same as workdir: ', this.skeleton)
       process.exit(1)
     }
-    this.cached = {routes:new Map(), schemas:new Map()}
+    this.cached = {routes:new Map(), schemas:new Map(), tree:{} }
   }
   async firstrun(){
     const selfDir = dirname(fileURLToPath(import.meta.url))
@@ -248,7 +248,6 @@ class YAFBRG_Cli extends Cli{
     }
     // paths aliases
     // TODO check is symbolic link directory
-    console.dir(resolve(join(this.workDir,SRCPATH)))
     const tmppathAliases = readdirSync(resolve(join(this.workDir,SRCPATH)),{withFileTypes:true})
     .filter(f=>f.isDirectory()||f.isSymbolicLink())
     .map(f=>f.name)
@@ -275,7 +274,11 @@ class YAFBRG_Cli extends Cli{
   async rebuild(fileEvents){
     const updates = []
     const failed = []
-    for (const { filename } of fileEvents.filter(({event})=>event!=='unlink')) {
+    fileEvents = fileEvents.filter(({event})=>event!=='unlink')
+    // TODO if not route, then figure out witch route needs rebuild
+    // this.cached.tree)
+
+    for (const { filename } of fileEvents) {
       if (!filename.endsWith('.mts')) continue
       if (!filename.startsWith(this.routesDir)) continue
       const parsed = await compileundparse(filename,this.outDir,this.workDir,this.pathAliases)
@@ -455,7 +458,6 @@ class YAFBRG_Cli extends Cli{
         const tmpQ = {}
         tmpQ[method.type] = {...route,...method}
         let operation = `${method.name}${route.operationName}`
-        //console.dir(route)
         if (method.parameters.length){
           const ops = []
           for (let {name,type,required} of method.parameters){
@@ -522,9 +524,11 @@ class YAFBRG_Cli extends Cli{
     writeFileSync(gqlOpsFilename,opsFile)
 
     // make server
-    const { serverFilename, templateFilename } = findTemplateFileUndMakeServerFilename(cli.srcDir,cli.outDir,TEMPLATESUFFIX)
+    const { serverFilename, templateFilename } = findTemplateFileUndMakeServerFilename(this.srcDir,this.outDir,TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)) {
-      console.dir(renderData)
+      // TODO go over source to find process.env.FOO's
+      renderData.envs  = findEnvs(join(this.outDir,SRCPATH))
+      //console.dir(renderData)
       const serverSource = render(templateFilename, renderData)//routes2data(this.cached,this.port,this.srcDir))
       console.log('using',templateFilename,'for',serverFilename)
       writeFileSync(serverFilename,serverSource)/*
@@ -554,6 +558,55 @@ class YAFBRG_Cli extends Cli{
     }
     return true
   }
+}
+
+function findEnvs(srcDir){
+  let result = []
+  const dirnames = readdirSync(resolve(srcDir),{withFileTypes:true})
+  .filter(f=>f.isDirectory()||f.isSymbolicLink())
+  .map(f=>f.name)
+  .filter(x=>!(x.endsWith('__')&&x.startsWith('__')))
+  for (const dirname of dirnames){
+    result = [...result,findEnvs(join(srcDir,dirname))].flat()
+  }
+  const filenames = readdirSync(resolve(srcDir),{withFileTypes:true})
+  .filter(f=>f.isFile())
+  .map(f=>f.name)
+  .filter(x=>!(x.endsWith('__')&&x.startsWith('__')))
+  for (const filename of filenames) {
+    const from = join(srcDir,filename)
+    const raw = readFileSync(from,'utf-8')
+    const qRegex = /process\.env\./g
+    if (qRegex.test(raw)) {
+      const lines  = raw.match(/.*process\.env\..*\n/g)
+      // TODO tolerate multiple spaces 
+      const vedRegex = /(?<varname>\w*)\s?(:|=)\s?(process\.env\.(?<NAME>\w*))(\s?(\|\|)\s?(?<default>(?=["'])(?:"[^"\\]*(?:\\[\s\S][^"\\]*)*"|'[^'\\]*(?:\\[\s\S][^'\\]*)*')|\w*))?/gm
+      const vfeRegex = /(?<varname>\w*)\s?(:|=)\s?(?<func>\w*)(\(\process\.env\.(?<NAME>\w*)\b)(\s?(\|\|)\s?(?<default>(?=["'])(?:"[^"\\]*(?:\\[\s\S][^"\\]*)*"|'[^'\\]*(?:\\[\s\S][^'\\]*)*')|\w*))?/
+      const eRegex =  /process\.env\.(?<NAME>\w*)/
+      const vars = []
+      for (const line of lines){
+        let x = vedRegex.exec(line)
+
+        if (x?.groups) vars.push({varName:x.groups.varname,envName:x.groups.NAME,defaultValue:x.groups.default||'undefined'})
+        else {
+          x = vfeRegex.exec(line)
+
+          if (x?.groups) vars.push({varName:x.groups.varname,envName:x.groups.NAME,funcName:x.groups.func,defaultValue:x.groups.default||'undefined'})
+          else {
+
+            x = eRegex.exec(line)
+            if (x?.groups) vars.push({envName:x.groups.NAME,defaultValue:'undefined'})
+            else {
+              console.log('bad regggggex',line,x)
+            }
+          }
+        }
+      }
+      result.push({from:join(srcDir,filename),vars})
+    }
+  }
+
+  return result
 }
 
 function findTemplateFileUndMakeServerFilename(srcDir,outDir,suffix) {

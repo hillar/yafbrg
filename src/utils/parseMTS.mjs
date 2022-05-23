@@ -100,7 +100,7 @@ function getImportsundMethods(main, mainFileName ) {
         if (ts.isVariableStatement(node)) {
           for (const declaration of node.declarationList.declarations) {
             // export const x = (a,b) => {}
-            if (declaration.initializer.parameters && ts.getCombinedModifierFlags(declaration)) {
+            if (declaration?.initializer?.parameters && ts.getCombinedModifierFlags(declaration)) {
               const name = declaration.name.escapedText.toString()
               const parameters = []
               for (const parameter of declaration.initializer.parameters) {
@@ -218,7 +218,6 @@ function geetTypes(types, filename, main,alreadyFound=[]){
     for (const node of sourceFile.imports){
       const imported = []
       const moduleSpecifier = node?.parent?.moduleSpecifier?.text
-      console.dir({moduleSpecifier})
       if (node?.parent?.importClause?.namedBindings?.elements) for (const element of node.parent.importClause.namedBindings.elements) {
         if (element.propertyName){
           const name = element.name.escapedText
@@ -229,7 +228,6 @@ function geetTypes(types, filename, main,alreadyFound=[]){
       const has = imported.filter(x=>notFound.includes(x))
       if (has.length){
         // resolve $
-        console.dir({has})
         const { resolvedModule } = ts.resolveModuleName(node.text,sourceFile.path,main.getCompilerOptions(),main)
         if (resolvedModule){
           const { resolvedFileName } = resolvedModule
