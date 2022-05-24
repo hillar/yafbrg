@@ -4,8 +4,8 @@ import { render, routes2data, getDefaultTemplate } from './utils/mustache.mjs'
 import { Cli } from './utils/cli.mjs'
 import { parseAllMTS, parseRoute, findAllMTS } from './yafbrg.mjs'
 import { compileundparse, toOpenApi, toGraphql, primitives } from './utils/parseMTS.mjs'
-import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, constants, readlinkSync } from 'node:fs'
-import { join, dirname, resolve } from 'node:path'
+import { readdirSync, mkdirSync, readFileSync, writeFileSync, accessSync, constants, readlinkSync, unlinkSync } from 'node:fs'
+import { join, dirname, resolve, extname } from 'node:path'
 import { fileURLToPath } from 'node:url';
 import { default as chokidar } from 'chokidar'
 import { execa, execaCommandSync } from 'execa'
@@ -526,9 +526,10 @@ class YAFBRG_Cli extends Cli{
     // make server
     const { serverFilename, templateFilename } = findTemplateFileUndMakeServerFilename(this.srcDir,this.outDir,TEMPLATESUFFIX)
     if (fsExistsundWritable(templateFilename)) {
-      // TODO go over source to find process.env.FOO's
-      renderData.envs  = findEnvs(join(this.outDir,SRCPATH))
-      //console.dir(renderData)
+      // go over source to find process.env.FOO's
+      if (fsExistsundWritable(serverFilename)) unlinkSync(serverFilename)
+      renderData.envs  = [...findEnvs(join(this.outDir,SRCPATH)),...findEnvs(dirname(templateFilename),extname(templateFilename))]
+
       const serverSource = render(templateFilename, renderData)//routes2data(this.cached,this.port,this.srcDir))
       console.log('using',templateFilename,'for',serverFilename)
       writeFileSync(serverFilename,serverSource)/*
@@ -560,7 +561,7 @@ class YAFBRG_Cli extends Cli{
   }
 }
 
-function findEnvs(srcDir){
+function findEnvs(srcDir,ext='.mjs'){
   let result = []
   const dirnames = readdirSync(resolve(srcDir),{withFileTypes:true})
   .filter(f=>f.isDirectory()||f.isSymbolicLink())
@@ -570,7 +571,7 @@ function findEnvs(srcDir){
     result = [...result,findEnvs(join(srcDir,dirname))].flat()
   }
   const filenames = readdirSync(resolve(srcDir),{withFileTypes:true})
-  .filter(f=>f.isFile())
+  .filter(f=>f.isFile()&&f.name.endsWith(ext))
   .map(f=>f.name)
   .filter(x=>!(x.endsWith('__')&&x.startsWith('__')))
   for (const filename of filenames) {
@@ -579,7 +580,7 @@ function findEnvs(srcDir){
     const qRegex = /process\.env\./g
     if (qRegex.test(raw)) {
       const lines  = raw.match(/.*process\.env\..*\n/g)
-      // TODO tolerate multiple spaces 
+      // TODO tolerate multiple spaces
       const vedRegex = /(?<varname>\w*)\s?(:|=)\s?(process\.env\.(?<NAME>\w*))(\s?(\|\|)\s?(?<default>(?=["'])(?:"[^"\\]*(?:\\[\s\S][^"\\]*)*"|'[^'\\]*(?:\\[\s\S][^'\\]*)*')|\w*))?/gm
       const vfeRegex = /(?<varname>\w*)\s?(:|=)\s?(?<func>\w*)(\(\process\.env\.(?<NAME>\w*)\b)(\s?(\|\|)\s?(?<default>(?=["'])(?:"[^"\\]*(?:\\[\s\S][^"\\]*)*"|'[^'\\]*(?:\\[\s\S][^'\\]*)*')|\w*))?/
       const eRegex =  /process\.env\.(?<NAME>\w*)/

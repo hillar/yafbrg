@@ -401,7 +401,7 @@ export const config = {
 
 ```
 yafbrg will grep them out and one can do in server mustache template whatever one want
-for example turn them into **cmd options** 
+for example turn them into **cmd options**
 see https://github.com/hillar/yafbrg/blob/main/samples/skeletetons/polka/src/polka-server.mustache
 
 ```
@@ -516,3 +516,7 @@ https://github.com/GiovanniCardamone/fastify-autoroutes
 https://github.com/israeleriston/fastify-register-routes
 
 https://github.com/fastify/fastify-swagger
+
+The authentication scheme connects to the REST API via an RFC 2616 HTTP header or RFC 3986 GET query argument. API Key authentication is usable simply by adding an http header with a key of **'apikey'** or **'x-apikey'** and a value of your apikey. 
+
+`...?apikey=5862e5ab11dbab78f1b8c0cf`
