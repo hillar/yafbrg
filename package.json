@@ -1,19 +1,22 @@
 {
   "name": "@hillar/yafbrg",
   "version": "0.0.1",
-  "description": "> мысли короткие как у буратино",
-  "main": "index.js",
+  "description": "filesystem based routes und API docs generation",
+  "main": "src/yafbrg-cli.js",
+  "bin": {
+    "yafbrg": "./src/yafbrg-cli.js"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"WARNING: no test specified\" && exit 0",
     "dev": "nodemon -w ./src -x node ./src/yafbrg-cli.mjs ./tmp/dev22 --skeleton=samples/skeletetons/polka"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/hillar/yafbrg.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["tsc","openapi","graphql","polka"],
+  "author": "hillar <hillar@aarelaid.net>",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/hillar/yafbrg/issues"
   },

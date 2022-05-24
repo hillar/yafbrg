@@ -11,11 +11,13 @@
 
 This is highly experimental, highly incomplete, and completely undocumented.
 
+see https://i.gifer.com/8YOU.mp4
+
 For now, a traditional development setup will be more productive.
 
 ## TLDR;
 
- yafbrg is a tsc compiler with custom config that works behind the scenes to turn your typescript module files into (polka || koa || fastify || express || ..) api server and openapi docs.
+ yafbrg is a tsc compiler with custom config that works behind the scenes to turn your typescript module files into (polka || koa || fastify || express || ..) api|graphql server and openapi|graphqli docs.
 
 * source **src/routes/users/[id]/index.mts**
 
@@ -380,6 +382,77 @@ options are valued in following order:
 
 **Skeletons** are baseline applications which meet some non-functionals (boilerplate code),
 things which no one really wants to reinvent. Skeleton is used only once in first run, if workdir is empty.
+
+## ENV VARS
+
+simply use them
+
+```
+const database = process.env.MYSQL_DB_NAME || 'name'
+```
+
+```
+export const config = {
+  type: 'mysql',
+  host: process.env.MYSQL_DB_HOST || 'localhost',
+  port: parseInt(process.env.MYSQL_DB_PORT||'3306'),
+  ...
+} as Partial<MikroORMOptions>;
+
+```
+yafbrg will grep them out and one can do in server mustache template whatever one want
+for example turn them into **cmd options** 
+see https://github.com/hillar/yafbrg/blob/main/samples/skeletetons/polka/src/polka-server.mustache
+
+```
+const ENVS = []
+const defaults = {}
+{{#envs}}
+// {{from}}
+{{#vars}}
+//{{funcName}} {{varName}}
+ENVS.push('{{envName}}')
+defaults.{{envName}} = {{defaultValue}}
+{{/vars}}
+{{/envs}}
+```
+
+help shows all *cmd opts* with defaults and *env vars* with current values
+
+```
+% node polka.mjs -h
+
+options (:default):
+	--mysql_db_host :localhost
+	--mysql_db_port :3306
+	--mysql_db_username :root
+	--mysql_db_password
+	--mysql_db_database :name
+	--kalamaja :4321
+
+enviroment vars (:value):
+	MYSQL_DB_HOST
+	MYSQL_DB_PORT
+	MYSQL_DB_USERNAME
+	MYSQL_DB_PASSWORD
+	MYSQL_DB_DATABASE
+	KALAMAJA  :linnupesa33
+
+```
+
+admin can simply override
+
+```
+node polka.mjs --mysql_db_database=namefromcmd --kalamaja=yetanothercmdopt
+{ settable: 'MYSQL_DB_DATABASE', default: 'name' }
+setting MYSQL_DB_DATABASE to namefromcmd
+{ settable: 'KALAMAJA', default: 4321 }
+KALAMAJA env was linnupesa33
+setting KALAMAJA to yetanothercmdopt
+> Polka server running on localhost: 6789
+```
+
+
 
 ## monorepos
 
