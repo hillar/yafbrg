@@ -1,10 +1,10 @@
 {
   "name": "yafbrg",
-  "version": "0.0.2-a0",
+  "version": "0.0.2-a3",
   "description": "filesystem based routes und API docs generation",
-  "main": "src/yafbrg-cli.js",
+  "main": "src/yafbrg-cli.mjs",
   "bin": {
-    "yafbrg": "./src/yafbrg-cli.js"
+    "yafbrg": "./src/yafbrg-cli.mjs"
   },
   "scripts": {
     "test": "echo \"WARNING: no test specified\" && exit 0",
@@ -25,7 +25,6 @@
     "chokidar": "^3.5.3",
     "core-types-graphql": "^1.4.0",
     "core-types-json-schema": "^1.6.2",
-    "core-types-ts": "^1.5.0",
     "execa": "^6.1.0",
     "mustache": "^4.2.0",
     "recursive-copy": "^2.0.14"
@@ -35,6 +34,7 @@
   },
   "peerDependencies":{
     "@types/node": "^17.0.35",
-    "typescript": "^4.8.0-dev.20220519"
+    "typescript": "^4.8.0-dev.20220519",
+    "chalk": "^5.0.1"
   }
 }

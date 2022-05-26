@@ -1,5 +1,5 @@
 import { default as ts } from 'typescript'
-import { convertTypeScriptToCoreTypes, convertCoreTypesToTypeScript } from 'core-types-ts'
+import { convertTypeScriptToCoreTypes, convertCoreTypesToTypeScript } from './core-types-ts/dist/index.js'
 import { convertCoreTypesToOpenApi, convertCoreTypesToJsonSchema } from 'core-types-json-schema'
 import { convertCoreTypesToGraphql } from 'core-types-graphql'
 import { default as chalk } from 'chalk'
@@ -43,6 +43,7 @@ async function compile(filename, outDir, rootDir, paths) {
     esModuleInterop: true
   }
   const program = ts.createProgram([filename], tscConfig)
+  console.dir({using:ts.version})
   let emitResult = await program.emit(
     undefined,
     (fileName, content) => {

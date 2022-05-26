@@ -4,12 +4,7 @@
 
 *yet another filesystem based route  generation*
 
-***highly opinionated***
-
-*(with API description generated from source files)*
-
-
-This is highly experimental, highly incomplete, and completely undocumented.
+This is highly opinionated, experimental, incomplete, and undocumented.
 
 see https://i.gifer.com/8YOU.mp4
 
@@ -17,7 +12,13 @@ For now, a traditional development setup will be more productive.
 
 ## TLDR;
 
- yafbrg is a tsc compiler with custom config that works behind the scenes to turn your typescript module files into (polka || koa || fastify || express || ..) api|graphql server and openapi|graphqli docs.
+yafbrg is a tsc compiler with custom config that works behind the scenes to turn your typescript module files into (polka || koa || fastify || express || ..) api|graphql server with swagger|graphqli endpoints and some docs.
+
+**API routes** *are generated* from filesystem **directory structure**.<br>
+**Call parameters** *are generated* from handler module **functions arguments** combined with denoted parts of filenames.<br>
+**Server response** is type of handler  **function return value**.   
+
+
 
 * source **src/routes/users/[id]/index.mts**
 
