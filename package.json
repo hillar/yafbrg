@@ -1,6 +1,6 @@
 {
-  "name": "@hillar/yafbrg",
-  "version": "0.0.1-a",
+  "name": "yafbrg",
+  "version": "0.0.2-a0",
   "description": "filesystem based routes und API docs generation",
   "main": "src/yafbrg-cli.js",
   "bin": {
@@ -21,17 +21,20 @@
     "url": "https://github.com/hillar/yafbrg/issues"
   },
   "homepage": "https://github.com/hillar/yafbrg#readme",
-  "devDependencies": {
-    "@types/node": "^17.0.35",
+  "dependencies": {
     "chokidar": "^3.5.3",
     "core-types-graphql": "^1.4.0",
     "core-types-json-schema": "^1.6.2",
     "core-types-ts": "^1.5.0",
     "execa": "^6.1.0",
     "mustache": "^4.2.0",
-    "nodemon": "^2.0.16",
-    "recursive-copy": "^2.0.14",
-    "typescript": "^4.8.0-dev.20220519",
-    "typescript-transform-paths": "^3.3.1"
+    "recursive-copy": "^2.0.14"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.16"
+  },
+  "peerDependencies":{
+    "@types/node": "^17.0.35",
+    "typescript": "^4.8.0-dev.20220519"
   }
 }

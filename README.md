@@ -492,6 +492,12 @@ why? to lazy to fight over SSOT
 
 
 -------
+
+https://github.com/pacedotdev/oto
+
+`npm install -D yafbrg`
+
+-------
 ```
 yarn add -D typescript@next
 yarn add -D core-types-graphql
@@ -517,6 +523,6 @@ https://github.com/israeleriston/fastify-register-routes
 
 https://github.com/fastify/fastify-swagger
 
-The authentication scheme connects to the REST API via an RFC 2616 HTTP header or RFC 3986 GET query argument. API Key authentication is usable simply by adding an http header with a key of **'apikey'** or **'x-apikey'** and a value of your apikey. 
+The authentication scheme connects to the REST API via an RFC 2616 HTTP header or RFC 3986 GET query argument. API Key authentication is usable simply by adding an http header with a key of **'apikey'** or **'x-apikey'** and a value of your apikey.
 
 `...?apikey=5862e5ab11dbab78f1b8c0cf`

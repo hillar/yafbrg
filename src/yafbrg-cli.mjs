@@ -141,6 +141,7 @@ const docsgenerator = (v) => {
 }
 
 const SRCPATH = 'src'
+const OUTPATH = '.build'
 const ROUTESPATH = 'routes'
 const DOCSPATH = 'docs'
 const TEMPLATESUFFIX = '-server.mustache'//.template.mjs'
@@ -151,7 +152,7 @@ class YAFBRG_Cli extends Cli{
     super({workDir:`./`},{port, sample, production,docsgenerator,packagemanager,skeleton})
       //this.workDir = resolve(this.workDir)
     //if (this.workDir !== framework() && this.outDir === `./${framework()}/.build`){
-      this.outDir = this.workDir+'/.build'
+      this.outDir = join(this.workDir,OUTPATH)
     //}
     if (process.stdout.isTTY) {
       console.log(this.prototypeof.toLowerCase(),'starting with:',this.defaults)
@@ -495,7 +496,7 @@ class YAFBRG_Cli extends Cli{
 
     // generate docs
     try {
-      execaCommandSync(`cd "${this.docsDir}" &&  ${this.docsgenerator} ../${SRCPATH}/${OPENAPIFILENAME}`,{shell:true,stderr: 'inherit'})
+      execaCommandSync(`cd "${this.docsDir}" &&  ${this.docsgenerator} ../${OUTPATH}/${OPENAPIFILENAME}`,{shell:true,stderr: 'inherit'})
     } catch (e) {
       return false
     }

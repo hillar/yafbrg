@@ -4,7 +4,7 @@ import { convertCoreTypesToOpenApi, convertCoreTypesToJsonSchema } from 'core-ty
 import { convertCoreTypesToGraphql } from 'core-types-graphql'
 import { default as chalk } from 'chalk'
 import { resolve, join, basename, dirname} from 'node:path'
-import typescripttransformpaths from 'typescript-transform-paths'
+import typescripttransformpaths from './typescript-transform-paths/dist/index.js'
 
 const createTransform = typescripttransformpaths.default
 

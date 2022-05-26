@@ -1,0 +1,25 @@
+{
+  "include": [ "src", "generated" ],
+
+  "compilerOptions": {
+    "noEmit": true,
+
+    "rootDir": ".",
+    "module": "ESNext",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "declaration": true,
+
+    "rootDirs": [ "src", "generated" ],
+
+    "baseUrl": ".",
+    "paths": {
+      "#root/*": [ "./src/*", "./generated/*" ],
+      "#exclusion/*": [ "./src/excluded/*" ],
+      "#elision": [ "./src/type-elision" ],
+      "#elision/*": [ "./src/type-elision/*" ],
+      "#packages/*": [ "./src/packages/*" ]
+    },
+    "resolveJsonModule": true
+  }
+}
