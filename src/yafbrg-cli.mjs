@@ -143,23 +143,22 @@ function which(cmd) {
 
 const docsgenerator = (v) => {
   let generator
-    let stdout = which(`openapi-generator2`)
-    if (stdout) {
-      generator = `${stdout} generate -g markdown -i `
-    } else {
-      const selfDir = dirname(fileURLToPath(import.meta.url))
-      const tmp = join(selfDir,'../node_modules/.bin/openapi-generator-cli22')
-      console.dir({tmp})
-      if (fsExistsundExecutable(tmp)) generator = `${tmp} generate -g markdown -i `
-    }
-
+  let stdout = which(`openapi-generator`)
+  if (stdout) {
+    generator = `${stdout} generate -g markdown -i `
+  } else {
+    const selfDir = dirname(fileURLToPath(import.meta.url))
+    const tmp = join(selfDir,'../../../node_modules/.bin/openapi-generator-cli')
+    if (fsExistsundExecutable(tmp)) generator = `${tmp} generate -g markdown -i `
+  }
   if (!generator) generator = ''
-  console.dir({generator})
   if (!v) return generator
   const cmd = v.split(' ')[0]
   if (fsExistsundExecutable(cmd)) return v
-  else throw new Error('not found or not executable: '+cmd)
-
+  else {
+    if (which(cmd).length) return v
+    else throw new Error('not found or not executable: '+cmd)
+  }
 }
 
 const SRCPATH = 'src'
@@ -517,7 +516,7 @@ class YAFBRG_Cli extends Cli{
     writeFileSync(openApiFilename,JSON.stringify(openapi))
 
     // generate docs
-    console.dir({dg:this.docsgenerator})
+    if (this.docsgenerator?.length) {
     try {
       execaCommandSync(`cd "${this.docsDir}" &&  ${this.docsgenerator} ../${OUTPATH}/${OPENAPIFILENAME}`,{shell:true,stderr: 'inherit'})
     } catch (e) {
@@ -525,6 +524,9 @@ class YAFBRG_Cli extends Cli{
       console.error('cant generate openapi docs')
       //return false
     }
+  } else {
+    console.log('NOTICE: no openapi doc generator. Skipping')
+  }
 
     const renderData = routes2data(this.cached,this.port,this.srcDir)
 

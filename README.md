@@ -502,6 +502,16 @@ waitlist:
 
 why? to lazy to fight over SSOT
 
+how?
+
+```
+docker run -p6789:6789 -v $(pwd):/opt/ -ti node:alpine sh
+apk add openjdk11
+cd /opt  
+npx yafbrg yourprojectname
+
+```
+
 -------
 
 --------
