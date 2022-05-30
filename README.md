@@ -12,7 +12,7 @@ For now, a traditional development setup will be more productive.
 
 ## TLDR;
 
-yafbrg is a tsc compiler with custom config that works behind the scenes to turn your typescript module files into (polka || koa || fastify || express || ..) api|graphql server with swagger|graphqli endpoints and some docs.
+yafbrg is a tsc compiler with custom config that works behind the scenes to turn your [typescript module files](https://devblogs.microsoft.com/typescript/announcing-typescript-4-7/#new-file-extensions) into (polka || koa || fastify || express || ..) api|graphql server with swagger|graphqli endpoints and some docs.
 
 **API routes** *are generated* from filesystem **directory structure**.<br>
 **Call parameters** *are generated* from handler module **functions arguments** combined with denoted parts of filenames.<br>
@@ -284,7 +284,25 @@ for (const { name, type, required } of method.parameters) {
 [core-types-ts](https://github.com/grantila/core-types-ts) is used to convert typescript to openapi schemas. Sadly have not (yet) found tool to convert *paths*, so had to write one ;/
 
 To make documentation out of openapi definition file, any tool can be used (openapi-to-md, widdershins, ..)
-For now default in configuration is [openapi-generator](https://github.com/OpenAPITools/openapi-generator)
+For now default in configuration is [openapi-generator](https://github.com/OpenAPITools/openapi-generator)<br>
+[Swagger-ui-dist](https://github.com/swagger-api/swagger-ui) is also dropped into server routes as `/openapi/`
+
+<details>
+
+<summary>if you do not have `/usr/local/bin/openapi-generator` then see </summary>
+
+[openapi-generator-cli](https://github.com/OpenAPITools/openapi-generator-cli)
+
+```
+npm install @openapitools/openapi-generator-cli
+
+npx yafbrg .... --docsgenerator="$(pwd)/node_modules/.bin/openapi-generator-cli generate -g markdown -i"
+```
+</details>
+
+## GraphQL
+[core-types-graphql](https://github.com/grantila/core-types-graphql) is used to convert typescript to graphql schema Types. Sadly have not (yet) found tool to convert *[Inputs](https://graphql.org/learn/schema/#input-types) , [Queries and Mutations](https://graphql.org/learn/queries/)*, so had to write one ;/<br>
+[GraphiQL](https://github.com/graphql/express-graphql) is also dropped into server routes simply as `.use('/graphql', graphqlHTTP({ schema: serverSchema, rootValue, graphiql: true}))`
 
 ## Server code generation
 
@@ -473,6 +491,12 @@ import { auth } from '$common/auth/freeipa.mjs'
 ---------------------
 
 works for me™
+
+waitlist:
+
+- [x] [ `.mts` ](https://devblogs.microsoft.com/typescript/announcing-typescript-4-7/#new-file-extensions)
+- [ ] tsc relative path imports
+
 
 -------
 
