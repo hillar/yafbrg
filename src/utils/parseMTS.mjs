@@ -40,7 +40,9 @@ async function compile(filename, outDir, rootDir, paths) {
     module: ts.ModuleKind.NodeNext,
     declaration: true,
     listEmittedFiles: true,
-    esModuleInterop: true
+    esModuleInterop: true,
+    checkJS: true,
+    allowJs: true
   }
   const program = ts.createProgram([filename], tscConfig)
   console.dir({using:ts.version})
@@ -130,9 +132,14 @@ function getImportsundMethods(main, mainFileName ) {
             parameters.push(getParam(parameter))
           }
           let type = checker.typeToString(checker.getTypeAtLocation(node.type), node.type, ts.TypeFormatFlags.None)
+          console.dir({type})
           let isAsync
           if (type.startsWith('Promise<')) isAsync = true
           type = type.replace('Promise<', '').replace('>', '')
+          let unions = type.split('|')
+          if (unions.length>1) type = ''
+          else unions = undefined
+          console.dir({type,unions})
           let jsDoc = []
           if (node.jsDoc) for (const { comment } of node.jsDoc) jsDoc.push(comment)
           else jsDoc = undefined
@@ -149,7 +156,7 @@ function getImportsundMethods(main, mainFileName ) {
             }
           }
           */
-          methods.push({ name, type, isAsync, parameters, jsDoc })
+          methods.push({ name, type, unions, isAsync, parameters, jsDoc })
         }
       }
       )

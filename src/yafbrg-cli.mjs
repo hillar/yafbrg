@@ -141,6 +141,8 @@ function which(cmd) {
   }
 }
 
+// TODO pure javascript parser !?
+// https://github.com/Redocly/redoc/blob/master/src/services/OpenAPIParser.ts
 const docsgenerator = (v) => {
   let generator
   let stdout = which(`openapi-generator`)
@@ -420,6 +422,8 @@ class YAFBRG_Cli extends Cli{
 
 
     const {data:openapi} = toOpenApi({ version:1, types })
+    //console.dir(types[0].properties.animal.node)
+    //console.dir(openapi?.components?.schemas?.Pet?.properties?.animal)
     // load from package.json
     const { version, name:title, description, author } = this.packageJson
     openapi.info = { version, title, description, contact: { name: author } }
@@ -438,7 +442,7 @@ class YAFBRG_Cli extends Cli{
         openapi.paths[route.curlified][mn].summary = method?.jsDoc?.join(' ') || ''
         const requestBodyproperties = {}
         let requestBodyRequired = false
-        for (const {name,type,required} of method.parameters){
+        for (let {name,type,unions,required} of method.parameters){
           const tmp = {name,required}
           tmp.schema = {}
           if (primitives.includes(type)) {
@@ -465,6 +469,13 @@ class YAFBRG_Cli extends Cli{
               }
         */
         let type = method.type
+        // TODO oneOf
+        if (method?.unions?.length>1){
+          type = method.unions[0]
+          console.dir({type,method})
+          console.error('discriminating unions not suuported yet !!!')
+        }
+
         let isArray = false
         if (type.endsWith('[]')){
           isArray = true
@@ -557,7 +568,6 @@ class YAFBRG_Cli extends Cli{
       // go over source to find process.env.FOO's
       if (fsExistsundWritable(serverFilename)) unlinkSync(serverFilename)
       renderData.envs  = [...findEnvs(join(this.outDir,SRCPATH)),...findEnvs(dirname(templateFilename),extname(templateFilename))]
-
       const serverSource = render(templateFilename, renderData)//routes2data(this.cached,this.port,this.srcDir))
       console.log('using',templateFilename,'for',serverFilename)
       writeFileSync(serverFilename,serverSource)/*
@@ -609,20 +619,17 @@ function findEnvs(srcDir,ext='.mjs'){
     if (qRegex.test(raw)) {
       const lines  = raw.match(/.*process\.env\..*\n/g)
       // TODO tolerate multiple spaces
-      const vedRegex = /(?<varname>\w*)\s?(:|=)\s?(process\.env\.(?<NAME>\w*))(\s?(\|\|)\s?(?<default>(?=["'])(?:"[^"\\]*(?:\\[\s\S][^"\\]*)*"|'[^'\\]*(?:\\[\s\S][^'\\]*)*')|\w*))?/gm
+      const vedRegex = /(?<varname>\w*)\s?(:|=)\s?(process\.env\.(?<NAME>\w*))(\s?(\|\|)\s?(?<default>(?=["'])(?:"[^"\\]*(?:\\[\s\S][^"\\]*)*"|'[^'\\]*(?:\\[\s\S][^'\\]*)*')|\w*))?/
       const vfeRegex = /(?<varname>\w*)\s?(:|=)\s?(?<func>\w*)(\(\process\.env\.(?<NAME>\w*)\b)(\s?(\|\|)\s?(?<default>(?=["'])(?:"[^"\\]*(?:\\[\s\S][^"\\]*)*"|'[^'\\]*(?:\\[\s\S][^'\\]*)*')|\w*))?/
       const eRegex =  /process\.env\.(?<NAME>\w*)/
       const vars = []
       for (const line of lines){
         let x = vedRegex.exec(line)
-
         if (x?.groups) vars.push({varName:x.groups.varname,envName:x.groups.NAME,defaultValue:x.groups.default||'undefined'})
         else {
           x = vfeRegex.exec(line)
-
           if (x?.groups) vars.push({varName:x.groups.varname,envName:x.groups.NAME,funcName:x.groups.func,defaultValue:x.groups.default||'undefined'})
           else {
-
             x = eRegex.exec(line)
             if (x?.groups) vars.push({envName:x.groups.NAME,defaultValue:'undefined'})
             else {
@@ -634,7 +641,6 @@ function findEnvs(srcDir,ext='.mjs'){
       result.push({from:join(srcDir,filename),vars})
     }
   }
-
   return result
 }
 
