@@ -11,6 +11,15 @@ import { default as chokidar } from 'chokidar'
 import { execa, execaCommandSync } from 'execa'
 import copy from 'recursive-copy';
 
+function fsExistsundReadable(name){
+  try {
+    accessSync(name, constants.R_OK );
+    return true
+  } catch (err) {
+    console.dir({err,name})
+    return false
+  }
+}
 
 function fsExistsundWritable(name){
   try {
@@ -122,7 +131,8 @@ const sample = framework
 
 const skeleton = (v) => {
   if (!v) return ''
-  if (fsExistsundWritable(v) && fsExistsundWritable(resolve(join(v,SRCPATH)))) return v
+  // TODO test again
+  if (fsExistsundWritable(v) && fsExistsundWritable(resolve(SRCPATH))) return resolve(v)
   else throw new Error('can not find skeleton: ' + v)
 }
 
@@ -600,9 +610,10 @@ class YAFBRG_Cli extends Cli{
 }
 
 function findEnvs(srcDir,ext='.mjs'){
+
   let result = []
   const dirnames = readdirSync(resolve(srcDir),{withFileTypes:true})
-  .filter(f=>f.isDirectory()||f.isSymbolicLink())
+  .filter(f=>f.isDirectory())//||f.isSymbolicLink())
   .map(f=>f.name)
   .filter(x=>!(x.endsWith('__')&&x.startsWith('__')))
   for (const dirname of dirnames){
@@ -648,12 +659,12 @@ function findTemplateFileUndMakeServerFilename(srcDir,outDir,suffix) {
   const [maybeTempalteFilename] = readdirSync(srcDir).filter(x=>x.endsWith(suffix))
   if (maybeTempalteFilename) {
     const  templateFilename = join(srcDir,maybeTempalteFilename)
-    if (fsExistsundWritable(templateFilename)){
+    if (fsExistsundReadable(templateFilename)){
         const serverFilename = join(outDir,SRCPATH,maybeTempalteFilename.replace(suffix,'.mjs'))
         return { serverFilename, templateFilename }
     }
   }
-  throw new Error('cant find template in '+srcDir+' with' + suffix)
+  throw new Error('cant find template in '+srcDir+' with ' + suffix)
 }
 
 const cli = new YAFBRG_Cli()
