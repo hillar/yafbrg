@@ -620,7 +620,7 @@ function findEnvs(srcDir,ext='.mjs'){
     result = [...result,findEnvs(join(srcDir,dirname))].flat()
   }
   const filenames = readdirSync(resolve(srcDir),{withFileTypes:true})
-  .filter(f=>f.isFile()&&f.name.endsWith(ext))
+  .filter(f=>(f.isFile()||f.isSymbolicLink())&&f.name.endsWith(ext))
   .map(f=>f.name)
   .filter(x=>!(x.endsWith('__')&&x.startsWith('__')))
   for (const filename of filenames) {
