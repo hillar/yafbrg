@@ -196,7 +196,7 @@ function geetTypes(types, filename, main,alreadyFound=[]){
       for (const { properties, name, title } of coreTypes.data.types){
         if (properties) {
           for (const key of Object.keys(properties)){
-            const ref = properties[key].node.ref
+            const { ref, type, elementType } = properties[key].node
             if (ref) needs.push(ref)
             else if (type === 'array' && elementType?.ref) {
               needs.push(elementType.ref)
