@@ -85,7 +85,7 @@ function getImportsundMethods(main, mainFileName ) {
   function getParam(parameter) {
     let type = checker.typeToString(checker.getTypeAtLocation(parameter), parameter, ts.TypeFormatFlags.None)
     const name = parameter.name.escapedText.toString()
-    const required = parameter.questionToken?.kind !== ts.SyntaxKind.QuestionToken
+    const required = parameter?.initializer ? false :  parameter.questionToken?.kind !== ts.SyntaxKind.QuestionToken
     const isPrimitive = primitives.includes(type)
     return { name, type, required, isPrimitive }
   }
