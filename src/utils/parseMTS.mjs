@@ -198,6 +198,9 @@ function geetTypes(types, filename, main,alreadyFound=[]){
           for (const key of Object.keys(properties)){
             const ref = properties[key].node.ref
             if (ref) needs.push(ref)
+            else if (type === 'array' && elementType?.ref) {
+              needs.push(elementType.ref)
+            }
           }
         } else console.log('no proerties',filename,name )
       }
