@@ -186,7 +186,7 @@ function geetTypes(types, filename, main,alreadyFound=[]){
   const result = {}
   const sourceFile = main.getSourceFile(filename)
   // TODO handle no sourceFile.text
-  const coreTypes = convertTypeScriptToCoreTypes(sourceFile?.text)
+  const coreTypes = convertTypeScriptToCoreTypes(sourceFile?.text,{nonExported:'include'})
   const refs = []
   const has = coreTypes.data.types.map( ({name}) => name )
   for (const lookfor of types) {
