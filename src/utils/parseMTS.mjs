@@ -1,5 +1,5 @@
 import { default as ts } from 'typescript'
-import { convertTypeScriptToCoreTypes, convertCoreTypesToTypeScript } from './core-types-ts/dist/index.js'
+import { convertTypeScriptToCoreTypes, convertCoreTypesToTypeScript } from  'core-types-ts' //'./core-types-ts/dist/index.js'
 import { convertCoreTypesToOpenApi, convertCoreTypesToJsonSchema } from 'core-types-json-schema'
 import { convertCoreTypesToGraphql } from 'core-types-graphql'
 import { default as chalk } from 'chalk'

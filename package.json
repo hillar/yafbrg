@@ -28,19 +28,21 @@
   "homepage": "https://github.com/hillar/yafbrg#readme",
   "dependencies": {
     "chokidar": "^3.5.3",
-    "core-types-graphql": "^1.5.0",
-    "core-types-json-schema": "^1.7.0",
-    "execa": "^6.1.0",
+    "core-types-graphql": "^3.0.0",
+    "core-types-json-schema": "^2.2.0",
+    "core-types-ts": "^4.1.0",
+    "execa": "^8.0.1",
     "mustache": "^4.2.0",
     "recursive-copy": "^2.0.14"
   },
   "devDependencies": {
-    "nodemon": "^2.0.20"
+    "nodemon": "^3.0.1",
+    "npm-check-updates": "^16.14.4"
   },
   "peerDependencies": {
-    "@openapitools/openapi-generator-cli": "^2.5.2",
-    "@types/node": "^18.11.11",
-    "chalk": "^5.1.2",
+    "@openapitools/openapi-generator-cli": "^2.7.0",
+    "@types/node": "^20.6.2",
+    "chalk": "^5.3.0",
     "typescript": "^4.9.3"
   }
 }
